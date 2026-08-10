@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en" data-palette="green">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hamzah Ahmed — Embedded Systems &amp; Flutter Portfolio</title>
+<meta name="description" content="Portfolio of Hamzah Ahmed, an embedded systems and Flutter enthusiast from Egypt. Projects: bayan (Quran app), Sentra (home robot), and chick-phobia (chat app)." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #050a07;
+    --panel: #081208;
+    --panel2: #0b1a0f;
+    --line: #1e4a2a;
+    --line-b: #2e7d44;
+    --text: #bfecc9;
+    --bright: #35ff8a;
+    --dim: #5aa873;
+    --soft: #9be3ae;
+    --glow: rgba(53, 255, 138, .4);
+    --crt: rgba(0, 0, 0, .22);
+    --pit: #020402;
+  }
+  html[data-palette="amber"] {
+    --bg: #080603;
+    --panel: #120b05;
+    --panel2: #1a1006;
+    --line: #5a3a18;
+    --line-b: #8a5a22;
+    --text: #ffdfa8;
+    --bright: #ffb020;
+    --dim: #c9925a;
+    --soft: #ffd9a2;
+    --glow: rgba(255, 176, 32, .4);
+    --crt: rgba(60, 0, 0, .2);
+    --pit: #0a0601;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; border-radius: 0 !important; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'VT323', monospace;
+    font-size: clamp(18px, 1.3vw + 15px, 22px);
+    line-height: 1.5;
+    overflow-x: hidden;
+    transition: background .3s, color .3s;
+  }
+  ::selection { background: var(--bright); color: var(--bg); }
+  a { color: var(--bright); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .container { max-width: 1060px; margin: 0 auto; padding: 0 clamp(14px, 4vw, 26px); }
+
+  .scanlines, .vignette { position: fixed; inset: 0; pointer-events: none; z-index: 900; }
+  .scanlines { background: repeating-linear-gradient(0deg, var(--crt) 0 1px, transparent 1px 3px); }
+  .vignette { background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.5) 100%); z-index: 901; }
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 899; background: var(--bg);
+    animation: flicker .12s infinite;
+  }
+  @keyframes flicker { 0% {opacity:.06} 50% {opacity:.03} 100% {opacity:.05} }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  @keyframes blink { 50% { opacity: 0; } }
+  @keyframes bootfade { to { opacity: 0; visibility: hidden; } }
+
+  #boot {
+    position: fixed; inset: 0; z-index: 9999; background: var(--bg);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  #boot.hidden { animation: bootfade .6s forwards; }
+  #boot .inner { width: min(560px, 86vw); font-size: 24px; color: var(--bright); text-shadow: 0 0 9px var(--glow); }
+  #boot .skip { position: absolute; bottom: 26px; width: 100%; text-align: center; color: var(--dim); font-size: 19px; letter-spacing: 2px; animation: pulse 1.6s infinite; }
+
+  .progress { position: fixed; top: 0; left: 0; height: 4px; width: 0%; z-index: 1000; background: var(--bright); box-shadow: 0 0 12px var(--glow); }
+
+  nav { position: sticky; top: 0; z-index: 60; background: var(--bg); border-bottom: 3px double var(--line); }
+  nav .container { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .logo { font-family: 'Press Start 2P', monospace; font-size: 13px; color: var(--text); letter-spacing: 1px; }
+  .logo .blink { color: var(--bright); animation: blink 1s step-start infinite; }
+  .nav-links { display: flex; gap: 22px; list-style: none; align-items: center; }
+  .nav-links a { color: var(--dim); font-size: 19px; padding: 2px 4px; }
+  .nav-links a::before { content: '> '; color: transparent; }
+  .nav-links a:hover, .nav-links a.active { color: var(--bright); text-decoration: none; }
+  .nav-links a:hover::before, .nav-links a.active::before { color: var(--bright); }
+  .palette-toggle {
+    font-family: 'Press Start 2P', monospace; font-size: 9px; padding: 9px 10px;
+    background: var(--panel); color: var(--bright); border: 2px solid var(--line-b);
+    box-shadow: 3px 3px 0 #000; cursor: pointer; text-transform: uppercase;
+  }
+  .palette-toggle:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+  .burger {
+    display: none; background: var(--panel); border: 2px solid var(--line-b); width: 40px; height: 40px;
+    color: var(--text); cursor: pointer; align-items: center; justify-content: center; flex-direction: column;
+    gap: 5px; box-shadow: 3px 3px 0 #000;
+  }
+  .burger span { display: block; width: 18px; height: 3px; background: var(--text); }
+  .burger.open span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+  .burger.open span:nth-child(2) { opacity: 0; }
+  .burger.open span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+  .mobile-menu {
+    display: none; position: fixed; inset: 60px 0 auto 0; z-index: 55; background: var(--bg);
+    border-bottom: 3px double var(--line); padding: 14px 22px 22px; flex-direction: column;
+  }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a { color: var(--text); font-size: 24px; padding: 10px 6px; }
+  .mobile-menu a:hover { color: var(--bright); text-decoration: none; }
+
+  header.hero { padding: 70px 0 60px; }
+  .hero-flex { display: grid; grid-template-columns: 1.35fr .65fr; gap: 46px; align-items: center; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 10px; font-size: 20px; letter-spacing: 1px;
+    border: 2px solid var(--line); background: var(--panel); color: var(--soft); padding: 6px 12px; margin-bottom: 22px;
+  }
+  .badge i { width: 9px; height: 9px; background: var(--bright); box-shadow: 0 0 10px var(--glow); animation: pulse 1.6s infinite; }
+  .hero h1 {
+    font-family: 'Press Start 2P', monospace; font-size: clamp(22px, 4.6vw, 40px); font-weight: 400;
+    line-height: 1.5; margin-bottom: 18px; color: var(--text); text-shadow: 0 0 12px var(--glow); letter-spacing: 1px;
+  }
+  .hero h1 .hz { color: var(--bright); }
+  .prompt-row { display: flex; gap: 10px; align-items: baseline; font-size: 24px; margin-bottom: 20px; color: var(--text); flex-wrap: wrap; min-height: 34px; }
+  .prompt-row .usr { color: var(--bright); }
+  .prompt-row .dir { color: var(--text); }
+  .cursor-block { width: 13px; height: 22px; background: var(--bright); box-shadow: 0 0 8px var(--glow); display: inline-block; animation: blink 1s step-start infinite; align-self: center; }
+  .hero p.lead { color: var(--soft); max-width: 620px; margin-bottom: 28px; font-size: 22px; }
+  .hero p.lead .ok { color: var(--bright); }
+
+  .cta-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    font-family: 'Press Start 2P', monospace; display: inline-flex; align-items: center; gap: 8px;
+    font-size: 10.5px; padding: 14px 16px; letter-spacing: 1px; text-transform: uppercase;
+    border: 2px solid var(--line-b); color: var(--bright); background: var(--panel);
+    box-shadow: 4px 4px 0 #000; cursor: pointer;
+  }
+  .btn:hover { text-decoration: none; transform: translate(-1px, -1px); box-shadow: 5px 5px 0 #000; background: var(--panel2); }
+  .btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 #000; }
+  .btn-solid { background: var(--bright); color: var(--bg); border-color: var(--bright); }
+  .btn-solid:hover { background: var(--text); }
+
+  .hero-socials { display: flex; gap: 10px; margin-top: 26px; }
+  .hero-socials a {
+    width: 42px; height: 42px; border: 2px solid var(--line-b); background: var(--panel);
+    display: inline-flex; align-items: center; justify-content: center; color: var(--text);
+    box-shadow: 3px 3px 0 #000;
+  }
+  .hero-socials a:hover { color: var(--bright); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #000; text-decoration: none; }
+
+  .term { border: 3px solid var(--line-b); background: var(--panel); box-shadow: 6px 6px 0 #000; }
+  .term .tbar {
+    display: flex; align-items: center; gap: 7px; background: var(--line);
+    border-bottom: 3px solid var(--line-b); padding: 8px 10px; min-width: 0;
+  }
+  .term .tbar .b { width: 11px; height: 11px; background: var(--bg); box-shadow: 1px 1px 0 var(--bg); flex: none; }
+  .term .tbar .b.x { background: var(--bright); }
+  .term .tbar .t { margin-left: 6px; font-family: 'Press Start 2P', monospace; font-size: 9px; color: var(--bg); letter-spacing: .5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .term .tbar .t.auto { margin-left: auto; flex: none; }
+  .term .tbody { padding: 18px 16px; }
+
+  .whoami { width: min(300px, 100%); justify-self: center; }
+  .whoami pre { font-size: 20px; line-height: 1.6; color: var(--text); overflow-x: auto; padding: 18px 16px; }
+  .whoami pre .c { color: var(--dim); }
+  .whoami pre .v { color: var(--bright); text-shadow: 0 0 8px var(--glow); }
+  .whoami pre .cur { display: inline-block; width: 10px; height: 17px; background: var(--bright); animation: blink 1s step-start infinite; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, auto); gap: 26px 40px; margin-top: 46px; }
+  .stat { border: 2px solid var(--line); background: var(--panel); padding: 12px 18px; box-shadow: 3px 3px 0 #000; }
+  .stat .n { font-family: 'Press Start 2P', monospace; font-size: 17px; color: var(--bright); text-shadow: 0 0 9px var(--glow); display: block; margin-bottom: 6px; }
+  .stat .l { color: var(--soft); font-size: 18px; letter-spacing: 1px; text-transform: uppercase; }
+
+  section { padding: 66px 0; }
+  .section-head { margin-bottom: 40px; }
+  .section-head .tag { font-size: 19px; color: var(--soft); letter-spacing: 1px; margin-bottom: 8px; }
+  .section-head .tag b { color: var(--bright); }
+  .section-head h2 { font-family: 'Press Start 2P', monospace; font-size: clamp(14px, 3vw, 19px); color: var(--text); text-shadow: 0 0 10px var(--glow); letter-spacing: 1px; }
+
+  .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; align-items: start; }
+  .about-text p { color: var(--soft); margin-bottom: 16px; font-size: 22px; }
+  .about-text p strong { color: var(--bright); font-weight: 400; text-shadow: 0 0 8px var(--glow); }
+  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .facts .fact { padding: 9px 12px; border: 2px solid var(--line); background: var(--panel); box-shadow: 3px 3px 0 #000; font-size: 19px; color: var(--soft); }
+  .facts .fact .k { color: var(--bright); }
+  .facts .fact .v { color: var(--text); }
+
+  .skills { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 26px; }
+  .skill-card p { color: var(--soft); font-size: 20px; margin-bottom: 18px; }
+  .skill-bar { margin-bottom: 14px; }
+  .skill-bar .row { display: flex; justify-content: space-between; color: var(--soft); font-size: 18px; margin-bottom: 5px; }
+  .skill-bar .row b { color: var(--text); font-weight: 400; }
+  .skill-bar .track { height: 18px; background: var(--pit); border: 2px solid var(--line); padding: 3px; }
+  .skill-bar .fill {
+    height: 100%; width: 0%;
+    background: repeating-linear-gradient(90deg, var(--bright) 0 8px, transparent 8px 12px);
+    transition: width 1.2s steps(8);
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font-size: 17px; padding: 3px 9px; border: 2px solid var(--line); background: var(--panel); color: var(--text);
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .chip .cdot { width: 8px; height: 8px; background: var(--bright); box-shadow: 0 0 6px var(--glow); }
+  .chip .cdot.c1 { background: #f34b7d; } .chip .cdot.c2 { background: #0175C2; } .chip .cdot.c3 { background: #f1e05a; }
+  .chip .cdot.c4 { background: #3178c6; } .chip .cdot.c5 { background: #a97bff; } .chip .cdot.c6 { background: #e34c26; }
+  .chip .cdot.c7 { background: #563d7c; } .chip .cdot.c8 { background: #b07219; } .chip .cdot.c9 { background: #00979d; }
+
+  .projects { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 26px; }
+  .project { display: flex; flex-direction: column; }
+  .project .tbar .ico { margin-right: 4px; }
+  .project p.desc { color: var(--soft); font-size: 20px; margin-bottom: 16px; flex: 1; }
+  .project .meta { display: flex; gap: 16px; font-size: 17px; color: var(--soft); margin: 0 0 16px; }
+  .project .meta b { color: var(--text); font-weight: 400; }
+  .project-actions { display: flex; gap: 10px; margin-top: auto; }
+  .link-btn {
+    font-family: 'Press Start 2P', monospace; font-size: 9px; padding: 11px 13px; letter-spacing: .5px;
+    border: 2px solid var(--line-b); color: var(--bright); background: var(--panel);
+    display: inline-flex; align-items: center; gap: 7px; box-shadow: 3px 3px 0 #000; cursor: pointer;
+  }
+  .link-btn:hover { text-decoration: none; transform: translate(-1px, -1px); box-shadow: 5px 5px 0 #000; background: var(--panel2); }
+  .link-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+
+  .cta-banner { border: 3px solid var(--line-b); background: var(--panel); box-shadow: 6px 6px 0 #000; padding: 44px 30px; text-align: center; }
+  .cta-banner h2 { font-family: 'Press Start 2P', monospace; font-size: clamp(12px, 2.6vw, 16px); color: var(--text); text-shadow: 0 0 10px var(--glow); margin-bottom: 14px; letter-spacing: 1px; }
+  .cta-banner p { color: var(--soft); max-width: 480px; margin: 0 auto 24px; font-size: 21px; }
+
+  footer { border-top: 3px double var(--line); padding: 40px 0 44px; }
+  .footer-grid { display: flex; justify-content: space-between; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .socials { display: flex; gap: 10px; }
+  .socials a {
+    width: 42px; height: 42px; border: 2px solid var(--line-b); background: var(--panel); color: var(--text);
+    display: inline-flex; align-items: center; justify-content: center; box-shadow: 3px 3px 0 #000;
+  }
+  .socials a:hover { color: var(--bright); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #000; text-decoration: none; }
+  footer .copyright { color: var(--soft); font-size: 19px; }
+  footer .copyright a { color: var(--bright); }
+  footer .copyright .heart { color: var(--bright); }
+
+  .to-top {
+    position: fixed; bottom: 26px; right: 26px; z-index: 60; width: 46px; height: 46px;
+    border: 2px solid var(--line-b); background: var(--panel); color: var(--text); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; box-shadow: 4px 4px 0 #000;
+    opacity: 0; visibility: hidden; transform: translateY(10px); transition: .25s;
+  }
+  .to-top.show { opacity: 1; visibility: visible; transform: none; }
+  .to-top:hover { color: var(--bright); transform: translate(-1px, -1px); }
+  .to-top:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+
+  @media (max-width: 860px) {
+    .nav-links, .palette-toggle.navp { display: none; }
+    .burger { display: inline-flex; }
+    .hero-flex { grid-template-columns: 1fr; gap: 54px; }
+    .whoami { order: -1; width: min(260px, 75%); }
+    .about-grid { grid-template-columns: 1fr; }
+    .facts { grid-template-columns: 1fr 1fr; }
+    .stats { grid-template-columns: 1fr 1fr; }
+    header.hero { padding: 50px 0 46px; }
+  }
+  @media (max-width: 620px) {
+    section { padding: 52px 0; }
+    .hero h1 { font-size: 22px; line-height: 1.6; }
+    .prompt-row { font-size: 20px; }
+    .hero p.lead { font-size: 19px; }
+    .cta-row .btn { flex: 1 1 auto; justify-content: center; }
+    .skills, .projects { grid-template-columns: 1fr; }
+    .term { box-shadow: 4px 4px 0 #000; }
+    .stats { gap: 16px; }
+    .tbar .t { font-size: 8px; }
+    .whoami pre { font-size: 18px; padding: 14px 12px; }
+    .about-text p { font-size: 19px; }
+    .cta-banner { padding: 34px 20px; }
+    .cta-banner p { font-size: 19px; }
+    .to-top { width: 42px; height: 42px; right: 18px; bottom: 18px; }
+    .link-btn { font-size: 8.5px; }
+  }
+  @media (max-width: 480px) { .facts, .stats { grid-template-columns: 1fr; } }
+
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    * { animation-duration: .001s !important; }
+  }
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+<div class="vignette"></div>
+<div class="progress" id="progress"></div>
+
+<div id="boot">
+  <div class="inner" id="bootText"></div>
+  <div class="skip">TAP ANYWHERE TO SKIP</div>
+</div>
+
+<nav>
+  <div class="container">
+    <a href="#" class="logo">HAMZAH<span class="blink">_</span></a>
+    <ul class="nav-links">
+      <li><a href="#about" class="nav-link">about</a></li>
+      <li><a href="#skills" class="nav-link">skills</a></li>
+      <li><a href="#projects" class="nav-link">projects</a></li>
+      <li><a href="#contact" class="nav-link">contact</a></li>
+      <li><button class="palette-toggle navp" id="paletteToggle" title="swap palette">amber crt</button></li>
+    </ul>
+    <button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#about">> about</a>
+  <a href="#skills">> skills</a>
+  <a href="#projects">> projects</a>
+  <a href="#contact">> contact</a>
+</div>
+
+<header class="hero">
+  <div class="container">
+    <div class="hero-flex">
+      <div>
+        <span class="badge"><i></i> Welcome to my portfolio</span>
+        <h1>HAMZAH <span class="hz">AHMED</span></h1>
+        <div class="prompt-row">
+          <span id="typing"></span>
+          <span class="cursor-block"></span>
+        </div>
+        <p class="lead">
+          Egyptian embedded systems &amp; <span class="ok">Flutter</span> enthusiast. I build hardware that comes alive and apps
+          people love to use — from home assistant robots to modern Islamic apps. Still growing,
+          always learning, and bridging the gap between circuits and pixels.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-solid" href="#projects">See my projects</a>
+          <a class="btn" href="https://github.com/HMZsuper18" target="_blank" rel="noopener">My GitHub</a>
+        </div>
+        <div class="hero-socials">
+          <a href="https://github.com/HMZsuper18" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-2.17c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.75 2.69 1.25 3.35.95.1-.74.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0C18.03 4.37 19 4.68 19 4.68c.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.69 5.39-5.25 5.67.41.35.78 1.05.78 2.12v3.14c0 .3.21.67.8.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+          </a>
+          <a href="mailto:hamzah.arkoub@gmail.com" aria-label="Email" title="Email">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <div class="term whoami">
+        <div class="tbar">
+          <span class="b"></span><span class="b"></span><span class="b x"></span>
+          <span class="t">about.txt</span>
+        </div>
+        <pre><span class="c"># Hi! I'm Hamzah Ahmed.</span>
+I live in <span class="v">Egypt</span> and I love
+making <span class="v">robots</span> and <span class="v">mobile apps</span>.
+
+github : <span class="v">HMZsuper18</span>
+email  : <span class="v">hamzah.arkoub@gmail.com</span><span class="cur"></span></pre>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><span class="n"><span class="count" data-target="3">0</span>+</span><span class="l">projects shipped</span></div>
+      <div class="stat"><span class="n"><span class="count" data-target="3">0</span></span><span class="l">languages</span></div>
+      <div class="stat"><span class="n"><span class="count" data-target="2">0</span></span><span class="l">worlds: hw + sw</span></div>
+    </div>
+  </div>
+</header>
+
+<section id="about">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="tag">01 — about</div>
+      <h2>About me</h2>
+    </div>
+    <div class="about-grid">
+      <div class="about-text reveal">
+        <p>
+          I'm a <strong>passionate hobbyist from Egypt</strong> exploring two worlds: the hardware side —
+          programming microcontrollers like the ESP32 with C++ and PlatformIO — and the software side —
+          cross-platform apps with Flutter. I love robotics, home automation, and making practical, beautiful software.
+        </p>
+        <p>
+          So far my journey produced a <strong>home assistant robot</strong>, a <strong>real-time chat platform</strong>,
+          and a <strong>modern Quran app</strong>. Always learning, always shipping.
+        </p>
+      </div>
+      <div class="facts reveal">
+        <div class="fact"><span class="k">name</span> <span class="v">Hamzah Ahmed</span></div>
+        <div class="fact"><span class="k">origin</span> <span class="v">Egypt</span></div>
+        <div class="fact"><span class="k">born</span> <span class="v">12/05/2013</span></div>
+        <div class="fact"><span class="k">focus</span> <span class="v">Embedded · Flutter</span></div>
+        <div class="fact"><span class="k">github</span> <span class="v">HMZsuper18</span></div>
+        <div class="fact"><span class="k">email</span> <span class="v">hamzah.arkoub@gmail.com</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="skills">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="tag">02 — skills</div>
+      <h2>What I work with</h2>
+    </div>
+    <div class="skills">
+
+      <div class="term skill-card reveal">
+        <div class="tbar"><span class="b"></span><span class="b"></span><span class="b x"></span><span class="t">Embedded systems</span></div>
+        <div class="tbody">
+          <p>Robotics, microcontrollers, automation — hardware that responds to the real world.</p>
+          <div class="skill-bar"><div class="row"><b>C++</b><span>75%</span></div><div class="track"><div class="fill" data-width="75"></div></div></div>
+          <div class="skill-bar"><div class="row"><b>ESP32 / PlatformIO</b><span>80%</span></div><div class="track"><div class="fill" data-width="80"></div></div></div>
+          <div class="chips">
+            <span class="chip"><span class="cdot c1"></span>C++</span>
+            <span class="chip"><span class="cdot c9"></span>ESP32</span>
+            <span class="chip"><span class="cdot c9"></span>PlatformIO</span>
+            <span class="chip"><span class="cdot c6"></span>Robotics</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="term skill-card reveal">
+        <div class="tbar"><span class="b"></span><span class="b"></span><span class="b x"></span><span class="t">Flutter apps</span></div>
+        <div class="tbody">
+          <p>Fast, lightweight, beautiful cross-platform apps for the masses.</p>
+          <div class="skill-bar"><div class="row"><b>Dart</b><span>80%</span></div><div class="track"><div class="fill" data-width="80"></div></div></div>
+          <div class="skill-bar"><div class="row"><b>Flutter UI</b><span>75%</span></div><div class="track"><div class="fill" data-width="75"></div></div></div>
+          <div class="chips">
+            <span class="chip"><span class="cdot c2"></span>Dart</span>
+            <span class="chip"><span class="cdot c2"></span>Flutter</span>
+            <span class="chip"><span class="cdot c5"></span>Mobile</span>
+            <span class="chip"><span class="cdot c1"></span>UI/UX</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="term skill-card reveal">
+        <div class="tbar"><span class="b"></span><span class="b"></span><span class="b x"></span><span class="t">Web & backend</span></div>
+        <div class="tbody">
+          <p>Real-time web apps with Firebase and Cloudinary, powered by JavaScript &amp; React.</p>
+          <div class="skill-bar"><div class="row"><b>JavaScript</b><span>70%</span></div><div class="track"><div class="fill" data-width="70"></div></div></div>
+          <div class="skill-bar"><div class="row"><b>React</b><span>65%</span></div><div class="track"><div class="fill" data-width="65"></div></div></div>
+          <div class="chips">
+            <span class="chip"><span class="cdot c3"></span>JavaScript</span>
+            <span class="chip"><span class="cdot c4"></span>React</span>
+            <span class="chip"><span class="cdot c3"></span>Firebase</span>
+            <span class="chip"><span class="cdot c5"></span>Cloudinary</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="projects" style="padding-top:0;">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="tag">03 — projects</div>
+      <h2>My projects</h2>
+      <p style="color:var(--soft); font-size:20px; margin-top:10px;">All projects are open source — you can read the code on GitHub.</p>
+    </div>
+    <div class="projects">
+
+      <article class="term project reveal">
+        <div class="tbar">
+          <span class="b"></span><span class="b"></span><span class="b x"></span>
+          <span class="t">bayan</span><span class="t auto">★ 0</span>
+        </div>
+        <div class="tbody">
+          <p class="desc">
+            A fast, lightweight modern Quran app built with Flutter. Multi-language interface (3 languages)
+            and audio recitation downloads for various Sheikhs.
+          </p>
+          <div class="chips" style="margin-bottom:16px;">
+            <span class="chip"><span class="cdot c2"></span>Dart</span>
+            <span class="chip"><span class="cdot c5"></span>Kotlin</span>
+            <span class="chip"><span class="cdot c2"></span>Flutter</span>
+            <span class="chip"><span class="cdot c2"></span>GPL-3.0</span>
+          </div>
+          <div class="meta"><span>langs: <b>Dart · Kotlin</b></span><span>2026</span></div>
+          <div class="project-actions">
+            <a class="link-btn" href="https://github.com/HMZsuper18/bayan" target="_blank" rel="noopener">See the code</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="term project reveal">
+        <div class="tbar">
+          <span class="b"></span><span class="b"></span><span class="b x"></span>
+          <span class="t">Sentra</span><span class="t auto">★ 1</span>
+        </div>
+        <div class="tbody">
+          <p class="desc">
+            ESP32 home assistant robot: hybrid control (Firebase RTDB + BLE), Egyptian Arabic voice commands,
+            a Flutter mobile app, and a 3D-printed chassis.
+          </p>
+          <div class="chips" style="margin-bottom:16px;">
+            <span class="chip"><span class="cdot c1"></span>C++</span>
+            <span class="chip"><span class="cdot c2"></span>Dart</span>
+            <span class="chip"><span class="cdot c6"></span>HTML</span>
+            <span class="chip"><span class="cdot c3"></span>Firebase</span>
+          </div>
+          <div class="meta"><span>langs: <b>C++ · Dart · HTML</b></span><span>2026</span></div>
+          <div class="project-actions">
+            <a class="link-btn" href="https://github.com/HMZsuper18/Sentra" target="_blank" rel="noopener">See the code</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="term project reveal">
+        <div class="tbar">
+          <span class="b"></span><span class="b"></span><span class="b x"></span>
+          <span class="t">chick-phobia</span><span class="t auto">★ 1</span>
+        </div>
+        <div class="tbody">
+          <p class="desc">
+            A real-time chat website using Firebase and Cloudinary for storage and media, with JavaScript
+            on both backend and frontend, built on the React framework.
+          </p>
+          <div class="chips" style="margin-bottom:16px;">
+            <span class="chip"><span class="cdot c3"></span>JavaScript</span>
+            <span class="chip"><span class="cdot c4"></span>TypeScript</span>
+            <span class="chip"><span class="cdot c7"></span>CSS</span>
+            <span class="chip"><span class="cdot c6"></span>HTML</span>
+            <span class="chip"><span class="cdot c8"></span>Java</span>
+          </div>
+          <div class="meta"><span>langs: <b>JS · TS · CSS · HTML · Java</b></span><span>2026</span></div>
+          <div class="project-actions">
+            <a class="link-btn" href="https://github.com/HMZsuper18/chick-phobia" target="_blank" rel="noopener">See the code</a>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<section id="contact" style="padding-top:0;">
+  <div class="container">
+    <div class="cta-banner reveal">
+      <div class="section-head" style="margin-bottom:20px;">
+        <div class="tag">04 — contact</div>
+        <h2>Get in touch</h2>
+      </div>
+      <p>Have a project, an idea, or just want to say hi? My inbox is always open — I usually reply fast.</p>
+      <p style="font-size:32px; color:var(--bright); text-shadow:0 0 10px var(--glow); word-break:break-all; margin-bottom:22px;">hamzah.arkoub@gmail.com</p>
+      <a class="link-btn" style="font-size:11px; padding:13px 18px;" href="mailto:hamzah.arkoub@gmail.com">Send me an email</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <p class="copyright">© <span id="year"></span> Hamzah Ahmed · made with <span class="heart">♥</span> in Egypt · email: <a href="mailto:hamzah.arkoub@gmail.com">hamzah.arkoub@gmail.com</a></p>
+      <div class="socials">
+        <a href="https://github.com/HMZsuper18" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-2.17c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.75 2.69 1.25 3.35.95.1-.74.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0C18.03 4.37 19 4.68 19 4.68c.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.69 5.39-5.25 5.67.41.35.78 1.05.78 2.12v3.14c0 .3.21.67.8.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+        </a>
+        <a href="mailto:hamzah.arkoub@gmail.com" aria-label="Email" title="Email">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Back to top" title="Back to top">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+</button>
+
+<script>
+  const bootLines = [
+    'Welcome to my portfolio!',
+    'Loading my projects...',
+    'Robots: ready',
+    'Mobile apps: ready',
+    'Almost done...',
+    'Enjoy your visit!',
+  ];
+
+  const boot = document.getElementById('boot');
+  const bootText = document.getElementById('bootText');
+  let bootDone = false;
+  function finishBoot() {
+    if (bootDone) return;
+    bootDone = true;
+    boot.classList.add('hidden');
+    setTimeout(() => boot.remove(), 650);
+  }
+  (function runBoot() {
+    let i = 0;
+    (function next() {
+      if (i < bootLines.length) {
+        bootText.textContent = bootLines[i];
+        i++;
+        setTimeout(next, 190);
+      } else {
+        setTimeout(finishBoot, 500);
+      }
+    })();
+  })();
+  boot.addEventListener('click', finishBoot);
+  document.addEventListener('keydown', finishBoot);
+
+  const phrases = ['I build mobile apps with Flutter', 'I make robots with embedded systems', 'I love mixing circuits and code', 'I am always learning'];
+  const typing = document.getElementById('typing');
+  let pi = 0, ci = 0, del = false;
+  (function type() {
+    const cur = phrases[pi];
+    typing.textContent = cur.slice(0, ci);
+    if (!del && ci < cur.length) { ci++; setTimeout(type, 60); }
+    else if (!del) { del = true; setTimeout(type, 2000); }
+    else if (ci > 0) { ci--; setTimeout(type, 28); }
+    else { del = false; pi = (pi + 1) % phrases.length; setTimeout(type, 350); }
+  })();
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        e.target.querySelectorAll('.fill').forEach(f => f.style.width = f.dataset.width + '%');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  const cio = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const c = e.target, target = +c.dataset.target;
+      let start = null;
+      const step = (ts) => {
+        if (!start) start = ts;
+        const p = Math.min((ts - start) / 800, 1);
+        c.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+        if (p < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+      cio.unobserve(c);
+    });
+  }, { threshold: 0.6 });
+  document.querySelectorAll('.count').forEach(el => cio.observe(el));
+
+  const progress = document.getElementById('progress');
+  const toTop = document.getElementById('toTop');
+  const sections = ['about', 'skills', 'projects', 'contact'];
+  const navLinks = document.querySelectorAll('.nav-link');
+  function onScroll() {
+    const h = document.documentElement;
+    const scrolled = h.scrollTop / (h.scrollHeight - h.clientHeight);
+    progress.style.width = (scrolled * 100) + '%';
+    toTop.classList.toggle('show', h.scrollTop > 400);
+    const pos = h.scrollTop + 120;
+    let current = '';
+    sections.forEach(id => {
+      const s = document.getElementById(id);
+      if (s && s.offsetTop <= pos) current = id;
+    });
+    navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + current));
+  }
+  document.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  toTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+  const burger = document.getElementById('burger');
+  const mobileMenu = document.getElementById('mobileMenu');
+  burger.addEventListener('click', () => {
+    burger.classList.toggle('open');
+    mobileMenu.classList.toggle('open');
+  });
+  mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    burger.classList.remove('open');
+    mobileMenu.classList.remove('open');
+  }));
+
+  const paletteBtn = document.getElementById('paletteToggle');
+  const saved = localStorage.getItem('palette');
+  if (saved) applyPalette(saved);
+  function applyPalette(p) {
+    document.documentElement.setAttribute('data-palette', p);
+    paletteBtn.textContent = (p === 'amber' ? 'green crt' : 'amber crt');
+  }
+  paletteBtn.addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-palette');
+    const next = cur === 'amber' ? 'green' : 'amber';
+    applyPalette(next);
+    localStorage.setItem('palette', next);
+  });
+
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
