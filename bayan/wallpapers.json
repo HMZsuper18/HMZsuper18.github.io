@@ -1,0 +1,166 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-09-20",
+  "categories": [
+    {
+      "id": "mecca",
+      "name": "Mecca",
+      "name_ar": "مكة",
+      "images": [
+        {
+          "id": "kaaba_night_golden",
+          "title": "Kaaba at Night",
+          "url": "bayan/wallpapers/mecca/01_kaaba_night_golden.jpg"
+        },
+        {
+          "id": "kaaba_haram",
+          "title": "Kaaba Haram",
+          "url": "bayan/wallpapers/mecca/02_kaaba_haram.jpg"
+        },
+        {
+          "id": "kaaba_pilgrims",
+          "title": "Kaaba with Pilgrims",
+          "url": "bayan/wallpapers/mecca/03_kaaba_pilgrims.jpg"
+        },
+        {
+          "id": "kaaba_wide",
+          "title": "Kaaba Wide View",
+          "url": "bayan/wallpapers/mecca/04_kaaba_wide.jpg"
+        },
+        {
+          "id": "kaaba_mecca",
+          "title": "Kaaba and Mecca",
+          "url": "bayan/wallpapers/mecca/05_kaaba_mecca.jpg"
+        }
+      ]
+    },
+    {
+      "id": "madinah",
+      "name": "Madinah",
+      "name_ar": "المدينة",
+      "images": [
+        {
+          "id": "prophets_mosque",
+          "title": "Prophet's Mosque",
+          "url": "bayan/wallpapers/madinah/01_prophets_mosque.jpg"
+        },
+        {
+          "id": "nabawi_blue",
+          "title": "Al-Nabawi Blue Sky",
+          "url": "bayan/wallpapers/madinah/02_nabawi_blue.jpg"
+        },
+        {
+          "id": "mosque_prophet",
+          "title": "Mosque of the Prophet",
+          "url": "bayan/wallpapers/madinah/03_mosque_prophet.jpg"
+        },
+        {
+          "id": "courtyard",
+          "title": "Courtyard at Dusk",
+          "url": "bayan/wallpapers/madinah/04_courtyard.jpg"
+        },
+        {
+          "id": "green_dome",
+          "title": "Green Dome Aerial",
+          "url": "bayan/wallpapers/madinah/05_green_dome.jpg"
+        }
+      ]
+    },
+    {
+      "id": "al_aqsa",
+      "name": "Al-Aqsa",
+      "name_ar": "الaqsa",
+      "images": [
+        {
+          "id": "dome_of_rock",
+          "title": "Dome of the Rock",
+          "url": "bayan/wallpapers/al_aqsa/01_dome_of_rock.jpg"
+        },
+        {
+          "id": "dome_golden",
+          "title": "Dome of the Rock Golden",
+          "url": "bayan/wallpapers/al_aqsa/02_dome_golden.jpg"
+        },
+        {
+          "id": "aerial_jerusalem",
+          "title": "Aerial View of Jerusalem",
+          "url": "bayan/wallpapers/al_aqsa/03_aerial_jerusalem.jpg"
+        },
+        {
+          "id": "dome_teal",
+          "title": "Dome Teal",
+          "url": "bayan/wallpapers/al_aqsa/04_dome_teal.jpg"
+        },
+        {
+          "id": "mosque_interior",
+          "title": "Mosque Interior",
+          "url": "bayan/wallpapers/al_aqsa/05_mosque_interior.jpg"
+        }
+      ]
+    },
+    {
+      "id": "quran",
+      "name": "Quran",
+      "name_ar": "القرآن",
+      "images": [
+        {
+          "id": "quran_prayer_beads",
+          "title": "Quran with Prayer Beads",
+          "url": "bayan/wallpapers/quran/01_quran_prayer_beads.jpg"
+        },
+        {
+          "id": "quran_text",
+          "title": "Quran Text",
+          "url": "bayan/wallpapers/quran/02_quran_text.jpg"
+        },
+        {
+          "id": "quran_book",
+          "title": "Quran Book",
+          "url": "bayan/wallpapers/quran/03_quran_book.jpg"
+        },
+        {
+          "id": "quran_table",
+          "title": "Quran on Table",
+          "url": "bayan/wallpapers/quran/04_quran_table.jpg"
+        },
+        {
+          "id": "mosque_crescent",
+          "title": "Mosque Crescent",
+          "url": "bayan/wallpapers/quran/05_mosque_crescent.jpg"
+        }
+      ]
+    },
+    {
+      "id": "ramadan",
+      "name": "Ramadan",
+      "name_ar": "رمضان",
+      "images": [
+        {
+          "id": "hilal_mosque_dome",
+          "title": "Hilal on Mosque Dome",
+          "url": "bayan/wallpapers/ramadan/01_hilal_mosque_dome.jpg"
+        },
+        {
+          "id": "crescent_night_sky",
+          "title": "Crescent in Night Sky",
+          "url": "bayan/wallpapers/ramadan/02_crescent_night_sky.jpg"
+        },
+        {
+          "id": "golden_dome_hilal",
+          "title": "Golden Dome with Hilal",
+          "url": "bayan/wallpapers/ramadan/04_golden_dome_hilal.jpg"
+        },
+        {
+          "id": "hilal_golden_symbol",
+          "title": "Hilal Golden Symbol",
+          "url": "bayan/wallpapers/ramadan/05_hilal_golden_symbol.jpg"
+        },
+        {
+          "id": "minaret_full_moon",
+          "title": "Minaret with Full Moon",
+          "url": "bayan/wallpapers/ramadan/07_minaret_full_moon.jpg"
+        }
+      ]
+    }
+  ]
+}
