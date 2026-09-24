@@ -10,29 +10,40 @@
         {
           "id": "kaaba_night_golden",
           "title": "Kaaba at Night",
-          "url": "bayan/wallpapers/mecca/01_kaaba_night_golden.jpg"
+          "url": "bayan/wallpapers/mecca/01_kaaba_night_golden.jpg",
+          "title_ar": "الكعبة ليلاً",
+          "title_ur": "رات کعبہ"
         },
         {
           "id": "kaaba_haram",
           "title": "Kaaba Haram",
-          "url": "bayan/wallpapers/mecca/02_kaaba_haram.jpg"
+          "url": "bayan/wallpapers/mecca/02_kaaba_haram.jpg",
+          "title_ar": "الكعبة المشرفة",
+          "title_ur": "کعبہ حرم"
         },
         {
           "id": "kaaba_pilgrims",
           "title": "Kaaba with Pilgrims",
-          "url": "bayan/wallpapers/mecca/03_kaaba_pilgrims.jpg"
+          "url": "bayan/wallpapers/mecca/03_kaaba_pilgrims.jpg",
+          "title_ar": "الكعبة والمرضى",
+          "title_ur": "کعبہ اور حجاج"
         },
         {
           "id": "kaaba_wide",
           "title": "Kaaba Wide View",
-          "url": "bayan/wallpapers/mecca/04_kaaba_wide.jpg"
+          "url": "bayan/wallpapers/mecca/04_kaaba_wide.jpg",
+          "title_ar": "الكعبة منظر واسع",
+          "title_ur": "کعبہ وسیع منظر"
         },
         {
           "id": "kaaba_mecca",
           "title": "Kaaba and Mecca",
-          "url": "bayan/wallpapers/mecca/05_kaaba_mecca.jpg"
+          "url": "bayan/wallpapers/mecca/05_kaaba_mecca.jpg",
+          "title_ar": "الكعبة ومكة",
+          "title_ur": "کعبہ اور مکہ"
         }
-      ]
+      ],
+      "name_ur": "مکہ"
     },
     {
       "id": "madinah",
@@ -42,29 +53,40 @@
         {
           "id": "prophets_mosque",
           "title": "Prophet's Mosque",
-          "url": "bayan/wallpapers/madinah/01_prophets_mosque.jpg"
+          "url": "bayan/wallpapers/madinah/01_prophets_mosque.jpg",
+          "title_ar": "المسجد النبوي",
+          "title_ur": "مسجد نبوی"
         },
         {
           "id": "nabawi_blue",
           "title": "Al-Nabawi Blue Sky",
-          "url": "bayan/wallpapers/madinah/02_nabawi_blue.jpg"
+          "url": "bayan/wallpapers/madinah/02_nabawi_blue.jpg",
+          "title_ar": "النبوي سماء زرقاء",
+          "title_ur": "نبوی نیلی آسمان"
         },
         {
           "id": "mosque_prophet",
           "title": "Mosque of the Prophet",
-          "url": "bayan/wallpapers/madinah/03_mosque_prophet.jpg"
+          "url": "bayan/wallpapers/madinah/03_mosque_prophet.jpg",
+          "title_ar": "مسجد النبي",
+          "title_ur": "مسجد نبی"
         },
         {
           "id": "courtyard",
           "title": "Courtyard at Dusk",
-          "url": "bayan/wallpapers/madinah/04_courtyard.jpg"
+          "url": "bayan/wallpapers/madinah/04_courtyard.jpg",
+          "title_ar": "الفناء عند الغروب",
+          "title_ur": "شام کا آنگن"
         },
         {
           "id": "green_dome",
           "title": "Green Dome Aerial",
-          "url": "bayan/wallpapers/madinah/05_green_dome.jpg"
+          "url": "bayan/wallpapers/madinah/05_green_dome.jpg",
+          "title_ar": "القبة الخضراء من الأعلى",
+          "title_ur": "سبز گنبد اونچائی سے"
         }
-      ]
+      ],
+      "name_ur": "مدینہ"
     },
     {
       "id": "al_aqsa",
@@ -74,29 +96,40 @@
         {
           "id": "dome_of_rock",
           "title": "Dome of the Rock",
-          "url": "bayan/wallpapers/al_aqsa/01_dome_of_rock.jpg"
+          "url": "bayan/wallpapers/al_aqsa/01_dome_of_rock.jpg",
+          "title_ar": "قبة الصخرة",
+          "title_ur": "قبۃ الصخرہ"
         },
         {
           "id": "dome_golden",
           "title": "Dome of the Rock Golden",
-          "url": "bayan/wallpapers/al_aqsa/02_dome_golden.jpg"
+          "url": "bayan/wallpapers/al_aqsa/02_dome_golden.jpg",
+          "title_ar": "قبة الصخرة الذهبية",
+          "title_ur": "سنہری قبۃ الصخرہ"
         },
         {
           "id": "aerial_jerusalem",
           "title": "Aerial View of Jerusalem",
-          "url": "bayan/wallpapers/al_aqsa/03_aerial_jerusalem.jpg"
+          "url": "bayan/wallpapers/al_aqsa/03_aerial_jerusalem.jpg",
+          "title_ar": "منظر جوي لقدس",
+          "title_ur": "یروشلم کا اڑان نظارہ"
         },
         {
           "id": "dome_teal",
           "title": "Dome Teal",
-          "url": "bayan/wallpapers/al_aqsa/04_dome_teal.jpg"
+          "url": "bayan/wallpapers/al_aqsa/04_dome_teal.jpg",
+          "title_ar": "القبة فيروزية",
+          "title_ur": "فیروزی قنبدہ"
         },
         {
           "id": "mosque_interior",
           "title": "Mosque Interior",
-          "url": "bayan/wallpapers/al_aqsa/05_mosque_interior.jpg"
+          "url": "bayan/wallpapers/al_aqsa/05_mosque_interior.jpg",
+          "title_ar": "داخل المسجد",
+          "title_ur": "مسجد کا اندر"
         }
-      ]
+      ],
+      "name_ur": "الاقصیٰ"
     },
     {
       "id": "quran",
@@ -106,29 +139,40 @@
         {
           "id": "quran_prayer_beads",
           "title": "Quran with Prayer Beads",
-          "url": "bayan/wallpapers/quran/01_quran_prayer_beads.jpg"
+          "url": "bayan/wallpapers/quran/01_quran_prayer_beads.jpg",
+          "title_ar": "القرآن مع المسبحة",
+          "title_ur": "قرآن اور تسبیح"
         },
         {
           "id": "quran_text",
           "title": "Quran Text",
-          "url": "bayan/wallpapers/quran/02_quran_text.jpg"
+          "url": "bayan/wallpapers/quran/02_quran_text.jpg",
+          "title_ar": "نص القرآن",
+          "title_ur": "قرآنی متن"
         },
         {
           "id": "quran_book",
           "title": "Quran Book",
-          "url": "bayan/wallpapers/quran/03_quran_book.jpg"
+          "url": "bayan/wallpapers/quran/03_quran_book.jpg",
+          "title_ar": "كتاب القرآن",
+          "title_ur": "قرآن کتاب"
         },
         {
           "id": "quran_table",
           "title": "Quran on Table",
-          "url": "bayan/wallpapers/quran/04_quran_table.jpg"
+          "url": "bayan/wallpapers/quran/04_quran_table.jpg",
+          "title_ar": "القرآن على الطاولة",
+          "title_ur": "میز پر قرآن"
         },
         {
           "id": "mosque_crescent",
           "title": "Mosque Crescent",
-          "url": "bayan/wallpapers/quran/05_mosque_crescent.jpg"
+          "url": "bayan/wallpapers/quran/05_mosque_crescent.jpg",
+          "title_ar": "هلال المسجد",
+          "title_ur": "مسجد کا چاند"
         }
-      ]
+      ],
+      "name_ur": "قرآن"
     },
     {
       "id": "ramadan",
@@ -138,29 +182,40 @@
         {
           "id": "hilal_mosque_dome",
           "title": "Hilal on Mosque Dome",
-          "url": "bayan/wallpapers/ramadan/01_hilal_mosque_dome.jpg"
+          "url": "bayan/wallpapers/ramadan/01_hilal_mosque_dome.jpg",
+          "title_ar": "الهلال على قبة المسجد",
+          "title_ur": "مسجد کے گنبد پر ہلال"
         },
         {
           "id": "crescent_night_sky",
           "title": "Crescent in Night Sky",
-          "url": "bayan/wallpapers/ramadan/02_crescent_night_sky.jpg"
+          "url": "bayan/wallpapers/ramadan/02_crescent_night_sky.jpg",
+          "title_ar": "الهلال في سماء الليل",
+          "title_ur": "رات کے آسمان پر ہلال"
         },
         {
           "id": "golden_dome_hilal",
           "title": "Golden Dome with Hilal",
-          "url": "bayan/wallpapers/ramadan/04_golden_dome_hilal.jpg"
+          "url": "bayan/wallpapers/ramadan/04_golden_dome_hilal.jpg",
+          "title_ar": "قبة ذهبية مع الهلال",
+          "title_ur": "سنہری گنبد ہلال کے ساتھ"
         },
         {
           "id": "hilal_golden_symbol",
           "title": "Hilal Golden Symbol",
-          "url": "bayan/wallpapers/ramadan/05_hilal_golden_symbol.jpg"
+          "url": "bayan/wallpapers/ramadan/05_hilal_golden_symbol.jpg",
+          "title_ar": "رمز الهلال الذهبي",
+          "title_ur": "سنہری ہلال کی علامت"
         },
         {
           "id": "minaret_full_moon",
           "title": "Minaret with Full Moon",
-          "url": "bayan/wallpapers/ramadan/07_minaret_full_moon.jpg"
+          "url": "bayan/wallpapers/ramadan/07_minaret_full_moon.jpg",
+          "title_ar": "مئذنة مع البدر",
+          "title_ur": "بلند منارہ پورے چاند کے ساتھ"
         }
-      ]
+      ],
+      "name_ur": "رمضان"
     }
   ]
 }
