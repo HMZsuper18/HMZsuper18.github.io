@@ -1,235 +1,214 @@
 {
-    "version": "1.0",
-    "last_updated": "2026-09-25",
-    "categories": [
-        {
-            "id": "mecca",
-            "name": "Mecca",
-            "name_ar": "مكة",
-            "images": [
-                {
-                    "id": "kaaba_night_golden",
-                    "title": "Kaaba Kiswah at Night",
-                    "url": "bayan/wallpapers/mecca/01_kaaba_night_golden.jpg",
-                    "title_ar": "ثوب الكعبة ليلاً",
-                    "title_ur": "کعبہ کی کسوت رات کو"
-                },
-                {
-                    "id": "kaaba_haram",
-                    "title": "Kaaba in the Grand Mosque",
-                    "url": "bayan/wallpapers/mecca/02_kaaba_haram.jpg",
-                    "title_ar": "الكعبة في المسجد الحرام",
-                    "title_ur": "مسجد الحرام میں کعبہ"
-                },
-                {
-                    "id": "kaaba_pilgrims",
-                    "title": "Kaaba with Pilgrims",
-                    "url": "bayan/wallpapers/mecca/03_kaaba_pilgrims.jpg",
-                    "title_ar": "الكعبة والمرضى",
-                    "title_ur": "کعبہ اور حجاج"
-                },
-                {
-                    "id": "kaaba_wide",
-                    "title": "Kaaba and Clock Tower",
-                    "url": "bayan/wallpapers/mecca/04_kaaba_wide.jpg",
-                    "title_ar": "الكعبة وبرج الساعة",
-                    "title_ur": "کعبہ اور گھڑی کا برج"
-                },
-                {
-                    "id": "kaaba_mecca",
-                    "title": "Aerial View of the Kaaba",
-                    "url": "bayan/wallpapers/mecca/05_kaaba_mecca.jpg",
-                    "title_ar": "منظر جوي للكعبة",
-                    "title_ur": "کعبہ کا اڑان نظارہ"
-                },
-                {
-                    "id": "kaaba_aerial_crowd",
-                    "title": "Kaaba amid Pilgrims",
-                    "url": "bayan/wallpapers/mecca/06_kaaba_aerial_crowd.jpg",
-                    "title_ar": "الكعبة وسط الحجاج",
-                    "title_ur": "حجاج کے درمیان کعبہ"
-                }
-            ],
-            "name_ur": "مکہ"
-        },
-        {
-            "id": "madinah",
-            "name": "Madinah",
-            "name_ar": "المدينة",
-            "images": [
-                {
-                    "id": "prophets_mosque",
-                    "title": "Green Dome and Minaret",
-                    "url": "bayan/wallpapers/madinah/01_prophets_mosque.jpg",
-                    "title_ar": "القبة الخضراء والمئذنة",
-                    "title_ur": "سبز گنبد اور منارہ"
-                },
-                {
-                    "id": "nabawi_blue",
-                    "title": "Al-Nabawi under Blue Sky",
-                    "url": "bayan/wallpapers/madinah/02_nabawi_blue.jpg",
-                    "title_ar": "المسجد النبوي تحت سماء زرقاء",
-                    "title_ur": "نیلے آسمان تلے نبوی مسجد"
-                },
-                {
-                    "id": "mosque_prophet",
-                    "title": "The Green Dome",
-                    "url": "bayan/wallpapers/madinah/03_mosque_prophet.jpg",
-                    "title_ar": "القبة الخضراء",
-                    "title_ur": "سبز گنبد"
-                },
-                {
-                    "id": "courtyard",
-                    "title": "Umbrella Courtyard at Sunset",
-                    "url": "bayan/wallpapers/madinah/04_courtyard.jpg",
-                    "title_ar": "الفناء والمظلات عند الغروب",
-                    "title_ur": "غروب کے وقت چھتے والے آنگن"
-                },
-                {
-                    "id": "green_dome",
-                    "title": "Prophet's Mosque Panorama",
-                    "url": "bayan/wallpapers/madinah/05_green_dome.jpg",
-                    "title_ar": "بانوراما المسجد النبوي",
-                    "title_ur": "مسجد نبوی کا پانوراما"
-                }
-            ],
-            "name_ur": "مدینہ"
-        },
-        {
-            "id": "al_aqsa",
-            "name": "Al-Aqsa",
-            "name_ar": "الاقصى",
-            "images": [
-                {
-                    "id": "dome_of_rock",
-                    "title": "Dome of the Rock",
-                    "url": "bayan/wallpapers/al_aqsa/01_dome_of_rock.jpg",
-                    "title_ar": "قبة الصخرة",
-                    "title_ur": "قبۃ الصخرہ"
-                },
-                {
-                    "id": "dome_golden",
-                    "title": "Golden Dome of the Rock",
-                    "url": "bayan/wallpapers/al_aqsa/02_dome_golden.jpg",
-                    "title_ar": "القبة الذهبية لقبة الصخرة",
-                    "title_ur": "سنہری قبۃ الصخرہ"
-                },
-                {
-                    "id": "aerial_jerusalem",
-                    "title": "Jerusalem Skyline",
-                    "url": "bayan/wallpapers/al_aqsa/03_aerial_jerusalem.jpg",
-                    "title_ar": "أفق مدينة القدس",
-                    "title_ur": "یروشلم کا افق"
-                },
-                {
-                    "id": "dome_teal",
-                    "title": "Al-Aqsa Mosque Dome",
-                    "url": "bayan/wallpapers/al_aqsa/04_dome_teal.jpg",
-                    "title_ar": "قبة المسجد الأقصى",
-                    "title_ur": "مسجد اقصیٰ کا گنبد"
-                },
-                {
-                    "id": "mosque_interior",
-                    "title": "Mihrab and Prayer Hall",
-                    "url": "bayan/wallpapers/al_aqsa/05_mosque_interior.jpg",
-                    "title_ar": "المحراب وصالة الصلاة",
-                    "title_ur": "محراہ اور نماز گاہ"
-                }
-            ],
-            "name_ur": "الاقصیٰ"
-        },
-        {
-            "id": "quran",
-            "name": "Quran",
-            "name_ar": "القرآن",
-            "images": [
-                {
-                    "id": "quran_prayer_beads",
-                    "title": "Quran with Prayer Beads",
-                    "url": "bayan/wallpapers/quran/01_quran_prayer_beads.jpg",
-                    "title_ar": "القرآن مع المسبحة",
-                    "title_ur": "قرآن اور تسبیح"
-                },
-                {
-                    "id": "quran_text",
-                    "title": "Open Quran Pages",
-                    "url": "bayan/wallpapers/quran/02_quran_text.jpg",
-                    "title_ar": "صفحات القرآن المفتوحة",
-                    "title_ur": "کھلا ہوا قرآن"
-                },
-                {
-                    "id": "quran_book",
-                    "title": "Ornate Quran Cover",
-                    "url": "bayan/wallpapers/quran/03_quran_book.jpg",
-                    "title_ar": "غلاف القرآن المزخرف",
-                    "title_ur": "آرایشی قرآن کی جلد"
-                },
-                {
-                    "id": "mushaf_illuminated",
-                    "title": "Illuminated Mushaf",
-                    "url": "bayan/wallpapers/quran/04_mushaf_illuminated.jpg",
-                    "title_ar": "مصحف مزخرف",
-                    "title_ur": "آرایشی مصحف"
-                },
-                {
-                    "id": "quran_reading_mosque",
-                    "title": "Reading Quran in the Mosque",
-                    "url": "bayan/wallpapers/quran/05_reading_mosque.jpg",
-                    "title_ar": "تلاوة القرآن في المسجد",
-                    "title_ur": "مسجد میں قرآن پڑھنا"
-                }
-            ],
-            "name_ur": "قرآن"
-        },
-        {
-            "id": "ramadan",
-            "name": "Ramadan",
-            "name_ar": "رمضان",
-            "images": [
-                {
-                    "id": "hilal_mosque_dome",
-                    "title": "Hilal on Mosque Dome",
-                    "url": "bayan/wallpapers/ramadan/01_hilal_mosque_dome.jpg",
-                    "title_ar": "الهلال على قبة المسجد",
-                    "title_ur": "مسجد کے گنبد پر ہلال"
-                },
-                {
-                    "id": "crescent_night_sky",
-                    "title": "Crescent in Twilight Sky",
-                    "url": "bayan/wallpapers/ramadan/02_crescent_night_sky.jpg",
-                    "title_ar": "الهلال في سماء الغروب",
-                    "title_ur": "شام کے آسمان پر ہلال"
-                },
-                {
-                    "id": "golden_dome_hilal",
-                    "title": "Golden Dome with Crescent",
-                    "url": "bayan/wallpapers/ramadan/04_golden_dome_hilal.jpg",
-                    "title_ar": "القبة الذهبية مع الهلال",
-                    "title_ur": "سنہری گنبد ہلال کے ساتھ"
-                },
-                {
-                    "id": "hilal_golden_symbol",
-                    "title": "Dome with Crescent Finial",
-                    "url": "bayan/wallpapers/ramadan/05_hilal_golden_symbol.jpg",
-                    "title_ar": "قبة بهلال ذهبي",
-                    "title_ur": "ہلال والی گنبد"
-                },
-                {
-                    "id": "minaret_full_moon",
-                    "title": "Minaret with Full Moon",
-                    "url": "bayan/wallpapers/ramadan/07_minaret_full_moon.jpg",
-                    "title_ar": "مئذنة مع البدر",
-                    "title_ur": "بلند منارہ پورے چاند کے ساتھ"
-                },
-                {
-                    "id": "dome_crescent",
-                    "title": "Dome with Crescent",
-                    "url": "bayan/wallpapers/ramadan/08_dome_crescent.jpg",
-                    "title_ar": "قبة مع الهلال",
-                    "title_ur": "ہلال کے ساتھ گنبد"
-                }
-            ],
-            "name_ur": "رمضان"
-        }
-    ]
+ "version": "1.0",
+ "last_updated": "2026-09-25",
+ "categories": [
+  {
+   "id": "mecca",
+   "name": "Mecca",
+   "name_ar": "مكة",
+   "images": [
+    {
+     "id": "kaaba_night_golden",
+     "title": "Kaaba Kiswah at Night",
+     "url": "bayan/wallpapers/mecca/01_kaaba_night_golden.jpg",
+     "title_ar": "ثوب الكعبة ليلاً",
+     "title_ur": "کعبہ کی کسوت رات کو"
+    },
+    {
+     "id": "kaaba_haram",
+     "title": "Kaaba in the Grand Mosque",
+     "url": "bayan/wallpapers/mecca/02_kaaba_haram.jpg",
+     "title_ar": "الكعبة في المسجد الحرام",
+     "title_ur": "مسجد الحرام میں کعبہ"
+    },
+    {
+     "id": "kaaba_pilgrims",
+     "title": "Kaaba with Pilgrims",
+     "url": "bayan/wallpapers/mecca/03_kaaba_pilgrims.jpg",
+     "title_ar": "الكعبة والمرضى",
+     "title_ur": "کعبہ اور حجاج"
+    },
+    {
+     "id": "kaaba_wide",
+     "title": "Kaaba and Clock Tower",
+     "url": "bayan/wallpapers/mecca/04_kaaba_wide.jpg",
+     "title_ar": "الكعبة وبرج الساعة",
+     "title_ur": "کعبہ اور گھڑی کا برج"
+    },
+    {
+     "id": "kaaba_mecca",
+     "title": "Aerial View of the Kaaba",
+     "url": "bayan/wallpapers/mecca/05_kaaba_mecca.jpg",
+     "title_ar": "منظر جوي للكعبة",
+     "title_ur": "کعبہ کا اڑان نظارہ"
+    },
+    {
+     "id": "kaaba_aerial_crowd",
+     "title": "Kaaba amid Pilgrims",
+     "url": "bayan/wallpapers/mecca/06_kaaba_aerial_crowd.jpg",
+     "title_ar": "الكعبة وسط الحجاج",
+     "title_ur": "حجاج کے درمیان کعبہ"
+    }
+   ],
+   "name_ur": "مکہ"
+  },
+  {
+   "id": "madinah",
+   "name": "Madinah",
+   "name_ar": "المدينة",
+   "images": [
+    {
+     "id": "prophets_mosque",
+     "title": "Green Dome and Minaret",
+     "url": "bayan/wallpapers/madinah/01_prophets_mosque.jpg",
+     "title_ar": "القبة الخضراء والمئذنة",
+     "title_ur": "سبز گنبد اور منارہ"
+    },
+    {
+     "id": "nabawi_blue",
+     "title": "Al-Nabawi under Blue Sky",
+     "url": "bayan/wallpapers/madinah/02_nabawi_blue.jpg",
+     "title_ar": "المسجد النبوي تحت سماء زرقاء",
+     "title_ur": "نیلے آسمان تلے نبوی مسجد"
+    },
+    {
+     "id": "mosque_prophet",
+     "title": "The Green Dome",
+     "url": "bayan/wallpapers/madinah/03_mosque_prophet.jpg",
+     "title_ar": "القبة الخضراء",
+     "title_ur": "سبز گنبد"
+    },
+    {
+     "id": "courtyard",
+     "title": "Umbrella Courtyard at Sunset",
+     "url": "bayan/wallpapers/madinah/04_courtyard.jpg",
+     "title_ar": "الفناء والمظلات عند الغروب",
+     "title_ur": "غروب کے وقت چھتے والے آنگن"
+    },
+    {
+     "id": "green_dome",
+     "title": "Prophet's Mosque Panorama",
+     "url": "bayan/wallpapers/madinah/05_green_dome.jpg",
+     "title_ar": "بانوراما المسجد النبوي",
+     "title_ur": "مسجد نبوی کا پانوراما"
+    }
+   ],
+   "name_ur": "مدینہ"
+  },
+  {
+   "id": "al_aqsa",
+   "name": "Al-Aqsa",
+   "name_ar": "الاقصى",
+   "images": [
+    {
+     "id": "dome_of_rock",
+     "title": "Dome of the Rock",
+     "url": "bayan/wallpapers/al_aqsa/01_dome_of_rock.jpg",
+     "title_ar": "قبة الصخرة",
+     "title_ur": "قبۃ الصخرہ"
+    },
+    {
+     "id": "dome_golden",
+     "title": "Golden Dome of the Rock",
+     "url": "bayan/wallpapers/al_aqsa/02_dome_golden.jpg",
+     "title_ar": "القبة الذهبية لقبة الصخرة",
+     "title_ur": "سنہری قبۃ الصخرہ"
+    },
+    {
+     "id": "aerial_jerusalem",
+     "title": "Jerusalem Skyline",
+     "url": "bayan/wallpapers/al_aqsa/03_aerial_jerusalem.jpg",
+     "title_ar": "أفق مدينة القدس",
+     "title_ur": "یروشلم کا افق"
+    },
+    {
+     "id": "dome_teal",
+     "title": "Al-Aqsa Mosque Dome",
+     "url": "bayan/wallpapers/al_aqsa/04_dome_teal.jpg",
+     "title_ar": "قبة المسجد الأقصى",
+     "title_ur": "مسجد اقصیٰ کا گنبد"
+    }
+   ],
+   "name_ur": "الاقصیٰ"
+  },
+  {
+   "id": "quran",
+   "name": "Quran",
+   "name_ar": "القرآن",
+   "images": [
+    {
+     "id": "quran_prayer_beads",
+     "title": "Quran with Prayer Beads",
+     "url": "bayan/wallpapers/quran/01_quran_prayer_beads.jpg",
+     "title_ar": "القرآن مع المسبحة",
+     "title_ur": "قرآن اور تسبیح"
+    },
+    {
+     "id": "quran_text",
+     "title": "Open Quran Pages",
+     "url": "bayan/wallpapers/quran/02_quran_text.jpg",
+     "title_ar": "صفحات القرآن المفتوحة",
+     "title_ur": "کھلا ہوا قرآن"
+    },
+    {
+     "id": "quran_book",
+     "title": "Ornate Quran Cover",
+     "url": "bayan/wallpapers/quran/03_quran_book.jpg",
+     "title_ar": "غلاف القرآن المزخرف",
+     "title_ur": "آرایشی قرآن کی جلد"
+    },
+    {
+     "id": "quran_reading_mosque",
+     "title": "Reading Quran in the Mosque",
+     "url": "bayan/wallpapers/quran/05_reading_mosque.jpg",
+     "title_ar": "تلاوة القرآن في المسجد",
+     "title_ur": "مسجد میں قرآن پڑھنا"
+    }
+   ],
+   "name_ur": "قرآن"
+  },
+  {
+   "id": "ramadan",
+   "name": "Ramadan",
+   "name_ar": "رمضان",
+   "images": [
+    {
+     "id": "hilal_mosque_dome",
+     "title": "Hilal on Mosque Dome",
+     "url": "bayan/wallpapers/ramadan/01_hilal_mosque_dome.jpg",
+     "title_ar": "الهلال على قبة المسجد",
+     "title_ur": "مسجد کے گنبد پر ہلال"
+    },
+    {
+     "id": "crescent_night_sky",
+     "title": "Crescent in Twilight Sky",
+     "url": "bayan/wallpapers/ramadan/02_crescent_night_sky.jpg",
+     "title_ar": "الهلال في سماء الغروب",
+     "title_ur": "شام کے آسمان پر ہلال"
+    },
+    {
+     "id": "golden_dome_hilal",
+     "title": "Golden Dome with Crescent",
+     "url": "bayan/wallpapers/ramadan/04_golden_dome_hilal.jpg",
+     "title_ar": "القبة الذهبية مع الهلال",
+     "title_ur": "سنہری گنبد ہلال کے ساتھ"
+    },
+    {
+     "id": "hilal_golden_symbol",
+     "title": "Dome with Crescent Finial",
+     "url": "bayan/wallpapers/ramadan/05_hilal_golden_symbol.jpg",
+     "title_ar": "قبة بهلال ذهبي",
+     "title_ur": "ہلال والی گنبد"
+    },
+    {
+     "id": "minaret_full_moon",
+     "title": "Minaret with Full Moon",
+     "url": "bayan/wallpapers/ramadan/07_minaret_full_moon.jpg",
+     "title_ar": "مئذنة مع البدر",
+     "title_ur": "بلند منارہ پورے چاند کے ساتھ"
+    }
+   ],
+   "name_ur": "رمضان"
+  }
+ ]
 }
