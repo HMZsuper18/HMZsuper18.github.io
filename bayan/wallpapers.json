@@ -6,6 +6,7 @@
    "id": "mecca",
    "name": "Mecca",
    "name_ar": "مكة",
+   "name_ur": "مکہ",
    "images": [
     {
      "id": "kaaba_night_golden",
@@ -25,7 +26,7 @@
      "id": "kaaba_pilgrims",
      "title": "Kaaba with Pilgrims",
      "url": "bayan/wallpapers/mecca/03_kaaba_pilgrims.jpg",
-     "title_ar": "الكعبة والمرضى",
+     "title_ar": "الكعبة والحجاج",
      "title_ur": "کعبہ اور حجاج"
     },
     {
@@ -49,13 +50,13 @@
      "title_ar": "الكعبة وسط الحجاج",
      "title_ur": "حجاج کے درمیان کعبہ"
     }
-   ],
-   "name_ur": "مکہ"
+   ]
   },
   {
    "id": "madinah",
    "name": "Madinah",
    "name_ar": "المدينة",
+   "name_ur": "مدینہ",
    "images": [
     {
      "id": "prophets_mosque",
@@ -92,13 +93,13 @@
      "title_ar": "بانوراما المسجد النبوي",
      "title_ur": "مسجد نبوی کا پانوراما"
     }
-   ],
-   "name_ur": "مدینہ"
+   ]
   },
   {
    "id": "al_aqsa",
    "name": "Al-Aqsa",
    "name_ar": "الاقصى",
+   "name_ur": "الاقصیٰ",
    "images": [
     {
      "id": "dome_of_rock",
@@ -120,21 +121,14 @@
      "url": "bayan/wallpapers/al_aqsa/03_aerial_jerusalem.jpg",
      "title_ar": "أفق مدينة القدس",
      "title_ur": "یروشلم کا افق"
-    },
-    {
-     "id": "dome_teal",
-     "title": "Al-Aqsa Mosque Dome",
-     "url": "bayan/wallpapers/al_aqsa/04_dome_teal.jpg",
-     "title_ar": "قبة المسجد الأقصى",
-     "title_ur": "مسجد اقصیٰ کا گنبد"
     }
-   ],
-   "name_ur": "الاقصیٰ"
+   ]
   },
   {
    "id": "quran",
    "name": "Quran",
    "name_ar": "القرآن",
+   "name_ur": "قرآن",
    "images": [
     {
      "id": "quran_prayer_beads",
@@ -158,19 +152,19 @@
      "title_ur": "آرایشی قرآن کی جلد"
     },
     {
-     "id": "quran_reading_mosque",
+     "id": "reading_mosque",
      "title": "Reading Quran in the Mosque",
      "url": "bayan/wallpapers/quran/05_reading_mosque.jpg",
      "title_ar": "تلاوة القرآن في المسجد",
      "title_ur": "مسجد میں قرآن پڑھنا"
     }
-   ],
-   "name_ur": "قرآن"
+   ]
   },
   {
    "id": "ramadan",
    "name": "Ramadan",
    "name_ar": "رمضان",
+   "name_ur": "رمضان",
    "images": [
     {
      "id": "hilal_mosque_dome",
@@ -207,8 +201,7 @@
      "title_ar": "مئذنة مع البدر",
      "title_ur": "بلند منارہ پورے چاند کے ساتھ"
     }
-   ],
-   "name_ur": "رمضان"
+   ]
   }
  ]
 }
