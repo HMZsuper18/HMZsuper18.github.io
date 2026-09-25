@@ -41,6 +41,13 @@
                     "url": "bayan/wallpapers/mecca/05_kaaba_mecca.jpg",
                     "title_ar": "منظر جوي للكعبة",
                     "title_ur": "کعبہ کا اڑان نظارہ"
+                },
+                {
+                    "id": "kaaba_aerial_crowd",
+                    "title": "Kaaba amid Pilgrims",
+                    "url": "bayan/wallpapers/mecca/06_kaaba_aerial_crowd.jpg",
+                    "title_ar": "الكعبة وسط الحجاج",
+                    "title_ur": "حجاج کے درمیان کعبہ"
                 }
             ],
             "name_ur": "مکہ"
@@ -158,18 +165,18 @@
                     "title_ur": "آرایشی قرآن کی جلد"
                 },
                 {
-                    "id": "quran_table",
-                    "title": "Kaaba amid Pilgrims",
-                    "url": "bayan/wallpapers/quran/04_quran_table.jpg",
-                    "title_ar": "الكعبة وسط الحجاج",
-                    "title_ur": "حجاج کے درمیان کعبہ"
+                    "id": "mushaf_illuminated",
+                    "title": "Illuminated Mushaf",
+                    "url": "bayan/wallpapers/quran/04_mushaf_illuminated.jpg",
+                    "title_ar": "مصحف مزخرف",
+                    "title_ur": "آرایشی مصحف"
                 },
                 {
-                    "id": "mosque_crescent",
-                    "title": "Dome with Crescent",
-                    "url": "bayan/wallpapers/quran/05_mosque_crescent.jpg",
-                    "title_ar": "قبة مع الهلال",
-                    "title_ur": "ہلال کے ساتھ گنبد"
+                    "id": "quran_reading_mosque",
+                    "title": "Reading Quran in the Mosque",
+                    "url": "bayan/wallpapers/quran/05_reading_mosque.jpg",
+                    "title_ar": "تلاوة القرآن في المسجد",
+                    "title_ur": "مسجد میں قرآن پڑھنا"
                 }
             ],
             "name_ur": "قرآن"
@@ -213,6 +220,13 @@
                     "url": "bayan/wallpapers/ramadan/07_minaret_full_moon.jpg",
                     "title_ar": "مئذنة مع البدر",
                     "title_ur": "بلند منارہ پورے چاند کے ساتھ"
+                },
+                {
+                    "id": "dome_crescent",
+                    "title": "Dome with Crescent",
+                    "url": "bayan/wallpapers/ramadan/08_dome_crescent.jpg",
+                    "title_ar": "قبة مع الهلال",
+                    "title_ur": "ہلال کے ساتھ گنبد"
                 }
             ],
             "name_ur": "رمضان"
