@@ -1,0 +1,9 @@
+# Security headers for the static admin dashboard.
+# Honored by Cloudflare Pages and Netlify as-is; GitHub Pages ignores this
+# file (use the CSP meta fallback there or front it with Cloudflare).
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://suapaafirstfkrxcfvem.supabase.co https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  X-Frame-Options: DENY
