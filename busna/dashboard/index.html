@@ -73,6 +73,9 @@
         <button class="nav-item" data-view="inspectors" type="button">
           <span class="nav-dot"></span> المفتشون
         </button>
+        <button class="nav-item hidden" data-view="feedback" type="button">
+          <span class="nav-dot"></span> الملاحظات
+        </button>
         <button class="nav-item hidden" data-view="users" type="button">
           <span class="nav-dot"></span> المستخدمون
         </button>
@@ -179,6 +182,42 @@
             </thead>
             <tbody id="inspectors-body">
               <tr><td colspan="6" class="empty">جارٍ التحميل…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ---------------------------------------------------------- feedback -->
+      <section id="view-feedback" class="view hidden">
+        <header class="view-head">
+          <div>
+            <h1>الملاحظات</h1>
+            <p class="muted">اقتراحات ومشاكل ورسائل أخرى أرسلها المستخدمون من التطبيق.</p>
+          </div>
+          <button id="btn-refresh-feedback" class="btn btn-ghost" type="button">تحديث</button>
+        </header>
+        <div id="feedback-error" class="banner banner-danger hidden"></div>
+        <div class="segmented segmented-4" id="feedback-filter" role="tablist">
+          <button type="button" class="segment is-active" data-category="all">الكل</button>
+          <button type="button" class="segment" data-category="suggestion">اقتراح</button>
+          <button type="button" class="segment" data-category="issue">مشكلة</button>
+          <button type="button" class="segment" data-category="other">أخرى</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>التاريخ</th>
+                <th>المستخدم</th>
+                <th>النوع</th>
+                <th>التفاصيل</th>
+                <th>الرسالة</th>
+                <th>الحالة</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="feedback-body">
+              <tr><td colspan="7" class="empty">جارٍ التحميل…</td></tr>
             </tbody>
           </table>
         </div>
@@ -294,6 +333,12 @@
           <input name="seats" type="number" min="1" step="1" required>
         </label>
       </div>
+      <label class="field field-full">
+        <span>المحطات (سطر لكل محطة: الاسم | السعر التراكمي من البداية)</span>
+        <textarea name="stops" rows="4" spellcheck="false"
+                  placeholder="القاهرة | 0&#10;طنطا | 40&#10;الإسكندرية | 100"></textarea>
+        <span class="hint muted">اتركها فارغة لمسار من محطتين (من/إلى). أول محطة سعرها 0 عادةً.</span>
+      </label>
       <label class="field field-check">
         <input name="is_active" type="checkbox" checked>
         <span>مسار فعّال (ظاهر للطلاب)</span>

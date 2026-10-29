@@ -628,9 +628,27 @@ button.badge {
   color: var(--text);
 }
 
-.field input:focus {
+.field input:focus,
+.field textarea:focus {
   outline: 2px solid rgba(46, 125, 209, 0.4);
   border-color: var(--accent);
+}
+
+.field textarea {
+  font: inherit;
+  font-weight: 500;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.field-full {
+  grid-column: 1 / -1;
+  margin-top: 14px;
 }
 
 .field-check {
@@ -681,6 +699,17 @@ button.badge {
   background: var(--surface);
   color: var(--navy);
   box-shadow: 0 1px 2px rgba(16, 35, 58, 0.1);
+}
+
+.segmented-4 {
+  grid-template-columns: repeat(4, 1fr);
+  max-width: 560px;
+}
+
+.feedback-message {
+  max-width: 420px;
+  white-space: pre-wrap;
+  line-height: 1.6;
 }
 
 .mode-panel .field + .hint {

@@ -280,3 +280,51 @@ export async function verifyTicketToken(token) {
   if (error) throw new Error(mapError(error));
   return data?.[0] || null;
 }
+
+// ---------------------------------------------------------------- feedback --
+
+export async function fetchFeedback() {
+  const { data, error } = await supabase
+    .from('feedback')
+    .select('id, category, other_label, message, status, created_at, users(full_name, email, phone)')
+    .order('created_at', { ascending: false })
+    .limit(300);
+  if (error) throw new Error(mapError(error));
+  return data || [];
+}
+
+export async function setFeedbackStatus(id, status) {
+  const { error } = await supabase.from('feedback').update({ status }).eq('id', id);
+  if (error) throw new Error(mapError(error));
+}
+
+// ------------------------------------------------------------- route stops --
+
+export async function fetchRouteStops(routeId) {
+  const { data, error } = await supabase
+    .from('route_stops')
+    .select('id, route_id, seq, name, price')
+    .eq('route_id', routeId)
+    .order('seq');
+  if (error) throw new Error(mapError(error));
+  return data || [];
+}
+
+export async function replaceRouteStops(routeId, stops) {
+  const { error: deleteError } = await supabase
+    .from('route_stops')
+    .delete()
+    .eq('route_id', routeId);
+  if (deleteError) throw new Error(mapError(deleteError));
+  if (!stops.length) return;
+
+  const { error } = await supabase.from('route_stops').insert(
+    stops.map((stop, index) => ({
+      route_id: routeId,
+      seq: index + 1,
+      name: stop.name,
+      price: stop.price,
+    })),
+  );
+  if (error) throw new Error(mapError(error));
+}

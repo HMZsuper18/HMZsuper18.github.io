@@ -9,6 +9,8 @@ const state = {
   routes: [],
   inspectors: [],
   users: [],
+  feedback: [],
+  feedbackCategory: 'all',
   routeEditingId: null,
   inspectorEditingId: null,
   inspectorMode: 'id',
@@ -60,6 +62,7 @@ function allowedViews(session) {
     // Analysts see every screen, just read-only.
     views.push('overview', 'routes', 'inspectors', 'users');
   }
+  if (session.canManage) views.push('feedback');
   if (session.canUseTools) views.push('tools');
   return views;
 }
@@ -124,7 +127,7 @@ function consumeOAuthError() {
 
 // ------------------------------------------------------------------ views --
 
-const VIEWS = ['overview', 'routes', 'inspectors', 'users', 'tools'];
+const VIEWS = ['overview', 'routes', 'inspectors', 'feedback', 'users', 'tools'];
 
 function currentView() {
   const hash = window.location.hash.replace('#', '');
@@ -145,6 +148,7 @@ function showView(name) {
   if (target === 'overview') loadOverview();
   if (target === 'routes') loadRoutes();
   if (target === 'inspectors') loadInspectors();
+  if (target === 'feedback') loadFeedback();
   if (target === 'users') loadUsers();
   if (target === 'tools') loadTools();
 }
@@ -323,7 +327,7 @@ function renderRoutes() {
     .join('');
 }
 
-function openRouteDialog(route = null) {
+async function openRouteDialog(route = null) {
   const form = $('#route-form');
   form.reset();
   setFormError('route', null);
@@ -340,11 +344,36 @@ function openRouteDialog(route = null) {
     form.move_time.value = formatTime(route.move_time);
     form.seats.value = route.seats;
     form.is_active.checked = Boolean(route.is_active);
+    form.stops.value = '';
+    try {
+      const stops = await api.fetchRouteStops(route.id);
+      form.stops.value = stops
+        .map((stop) => `${stop.name} | ${Number(stop.price)}`)
+        .join('\n');
+    } catch (_) {
+      // Stops are optional here; an empty box keeps the current ones.
+    }
   } else {
     form.is_active.checked = true;
+    form.stops.value = '';
   }
 
   $('#route-dialog').showModal();
+}
+
+// One stop per line, `name | cumulative price from the first stop`.
+function parseStops(raw) {
+  return raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [nameRaw, priceRaw] = line.split('|');
+      const name = (nameRaw || '').trim();
+      const parsed = Number((priceRaw || '0').trim());
+      return { name, price: Number.isFinite(parsed) && parsed >= 0 ? parsed : 0 };
+    })
+    .filter((stop) => stop.name);
 }
 
 async function saveRoute(event) {
@@ -353,11 +382,19 @@ async function saveRoute(event) {
   const saveButton = $('#btn-save-route');
   setFormError('route', null);
 
+  const stops = parseStops(form.stops.value);
+  const hasStops = stops.length > 0;
+  if (hasStops && stops.length < 2) {
+    setFormError('route', 'أدخل محطتين على الأقل، كل محطة في سطر: الاسم | السعر.');
+    return;
+  }
+
+  const last = hasStops ? stops[stops.length - 1] : null;
   const payload = {
     code: form.code.value.trim().toUpperCase(),
-    price: Number(form.price.value),
-    origin: form.origin.value.trim(),
-    destination: form.destination.value.trim(),
+    price: hasStops ? last.price : Number(form.price.value),
+    origin: hasStops ? stops[0].name : form.origin.value.trim(),
+    destination: hasStops ? last.name : form.destination.value.trim(),
     move_time: form.move_time.value,
     seats: Number(form.seats.value),
     is_active: form.is_active.checked,
@@ -365,13 +402,21 @@ async function saveRoute(event) {
 
   saveButton.disabled = true;
   try {
-    if (state.routeEditingId == null) {
-      await api.createRoute(payload);
-      toast('تمت إضافة المسار.');
-    } else {
-      await api.updateRoute(state.routeEditingId, payload);
-      toast('تم حفظ التعديلات.');
+    const creating = state.routeEditingId == null;
+    const route = creating
+      ? await api.createRoute(payload)
+      : await api.updateRoute(state.routeEditingId, payload);
+
+    if (hasStops) {
+      await api.replaceRouteStops(route.id, stops);
+    } else if (creating) {
+      await api.replaceRouteStops(route.id, [
+        { name: payload.origin, price: 0 },
+        { name: payload.destination, price: payload.price },
+      ]);
     }
+
+    toast(creating ? 'تمت إضافة المسار.' : 'تم حفظ التعديلات.');
     $('#route-dialog').close();
     await loadRoutes();
   } catch (error) {
@@ -664,6 +709,80 @@ async function saveUserRole(userId) {
   }
 }
 
+// --------------------------------------------------------------- feedback --
+
+const FEEDBACK_CATEGORY_LABELS = {
+  suggestion: 'اقتراح',
+  issue: 'مشكلة',
+  other: 'أخرى',
+};
+
+const FEEDBACK_STATUS_LABELS = {
+  new: 'جديد',
+  reviewed: 'تمت المراجعة',
+  resolved: 'تم الحل',
+};
+
+async function loadFeedback(trigger = null) {
+  const errorBox = $('#feedback-error');
+  errorBox.classList.add('hidden');
+
+  return withBusy(trigger, async () => {
+    try {
+      state.feedback = await api.fetchFeedback();
+      renderFeedback();
+    } catch (error) {
+      errorBox.textContent = error.message;
+      errorBox.classList.remove('hidden');
+    }
+  });
+}
+
+function renderFeedback() {
+  const body = $('#feedback-body');
+  const rows = state.feedback.filter(
+    (row) => state.feedbackCategory === 'all' || row.category === state.feedbackCategory,
+  );
+
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="7" class="empty">لا توجد ملاحظات في هذا التصنيف.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = rows
+    .map((row) => {
+      const user = row.users || {};
+      const category =
+        row.category === 'other'
+          ? escapeHtml(row.other_label || 'أخرى')
+          : FEEDBACK_CATEGORY_LABELS[row.category] || row.category;
+      const status = row.status || 'new';
+      const next = status === 'new' ? 'reviewed' : status === 'reviewed' ? 'resolved' : 'new';
+      const nextLabel =
+        status === 'new' ? 'تمت المراجعة' : status === 'reviewed' ? 'تم الحل' : 'إعادة فتح';
+      const badge =
+        status === 'resolved' ? 'badge-ok' : status === 'reviewed' ? 'badge-warn' : 'badge-off';
+
+      return `
+      <tr>
+        <td class="muted small">${formatStamp(row.created_at)}</td>
+        <td>
+          ${escapeHtml(user.full_name || '—')}
+          <div class="muted small">${escapeHtml(user.email || '')}</div>
+        </td>
+        <td><span class="badge badge-info">${category}</span></td>
+        <td>${row.category === 'other' ? escapeHtml(row.other_label || '—') : '—'}</td>
+        <td class="feedback-message">${escapeHtml(row.message)}</td>
+        <td><span class="badge ${badge}">${FEEDBACK_STATUS_LABELS[status] || status}</span></td>
+        <td class="row-actions">
+          <button class="btn btn-mini" data-feedback-status="${row.id}"
+                  data-next-status="${next}" type="button">${nextLabel}</button>
+        </td>
+      </tr>`;
+    })
+    .join('');
+}
+
 // ------------------------------------------------------------------- tools --
 
 async function loadTools(trigger = null) {
@@ -907,6 +1026,7 @@ function bindStatic() {
 
   $('#btn-refresh-overview').addEventListener('click', (event) => loadOverview(event.currentTarget));
   $('#btn-refresh-users').addEventListener('click', (event) => loadUsers(event.currentTarget));
+  $('#btn-refresh-feedback').addEventListener('click', (event) => loadFeedback(event.currentTarget));
   $('#btn-refresh-tools').addEventListener('click', (event) => loadTools(event.currentTarget));
   $('#btn-decode').addEventListener('click', () => analyzeToken(false));
   $('#btn-verify').addEventListener('click', () => analyzeToken(true));
@@ -1018,6 +1138,29 @@ function bindStatic() {
         $('#inspectors-error').classList.remove('hidden');
       }
     }
+  });
+
+  $$('#feedback-filter .segment').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.feedbackCategory = button.dataset.category;
+      $$('#feedback-filter .segment').forEach((item) =>
+        item.classList.toggle('is-active', item === button),
+      );
+      renderFeedback();
+    });
+  });
+
+  $('#feedback-body').addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-feedback-status]');
+    if (!button) return;
+    await withBusy(button, async () => {
+      try {
+        await api.setFeedbackStatus(button.dataset.feedbackStatus, button.dataset.nextStatus);
+        await loadFeedback();
+      } catch (error) {
+        toast(error.message);
+      }
+    });
   });
 
   $('#users-body').addEventListener('click', (event) => {
