@@ -712,6 +712,162 @@ button.badge {
   line-height: 1.6;
 }
 
+.nav-badge {
+  margin-inline-start: auto;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--navy);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.badge-danger {
+  background: rgba(224, 82, 74, 0.14);
+  color: #a3322c;
+}
+
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  color: var(--navy-light);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+}
+
+tr.is-unread td {
+  background: rgba(242, 169, 59, 0.07);
+}
+
+.inline-select {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+}
+
+.dialog-wide {
+  width: min(680px, calc(100vw - 32px));
+}
+
+.support-thread {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: min(86vh, 780px);
+}
+
+.support-thread-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.support-thread-head h2 {
+  margin: 0;
+}
+
+.support-thread-head p {
+  margin: 4px 0 0;
+}
+
+.support-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.support-controls select {
+  font: inherit;
+  font-weight: 500;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+}
+
+.support-messages {
+  flex: 1;
+  min-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--cream);
+  border: 1px solid var(--border);
+}
+
+.support-bubble {
+  max-width: 82%;
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.support-bubble.is-user {
+  align-self: flex-start;
+}
+
+.support-bubble.is-admin {
+  align-self: flex-end;
+  background: var(--navy);
+  color: var(--on-navy);
+  border-color: var(--navy);
+}
+
+.support-bubble.is-internal {
+  border-style: dashed;
+  box-shadow: 0 0 0 2px rgba(242, 169, 59, 0.25);
+}
+
+.support-bubble-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  opacity: 0.72;
+  margin-bottom: 5px;
+}
+
+.support-bubble p {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  line-height: 1.65;
+}
+
+.support-thread form {
+  padding: 0;
+}
+
 .mode-panel .field + .hint {
   margin-top: 8px;
 }

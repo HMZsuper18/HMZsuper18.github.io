@@ -74,7 +74,8 @@
           <span class="nav-dot"></span> المفتشون
         </button>
         <button class="nav-item hidden" data-view="feedback" type="button">
-          <span class="nav-dot"></span> الملاحظات
+          <span class="nav-dot"></span> طلبات الدعم
+          <span class="nav-badge hidden">0</span>
         </button>
         <button class="nav-item hidden" data-view="users" type="button">
           <span class="nav-dot"></span> المستخدمون
@@ -187,39 +188,62 @@
         </div>
       </section>
 
-      <!-- ---------------------------------------------------------- feedback -->
+      <!-- ---------------------------------------------------------- support -->
       <section id="view-feedback" class="view hidden">
         <header class="view-head">
           <div>
-            <h1>الملاحظات</h1>
-            <p class="muted">اقتراحات ومشاكل ورسائل أخرى أرسلها المستخدمون من التطبيق.</p>
+            <h1>طلبات الدعم</h1>
+            <p class="muted">
+              محادثات المستخدمين مع فريق الدعم، والاقتراحات التي لا تحتاج رداً.
+            </p>
           </div>
-          <button id="btn-refresh-feedback" class="btn btn-ghost" type="button">تحديث</button>
+          <button id="btn-refresh-support" class="btn btn-ghost" type="button">تحديث</button>
         </header>
-        <div id="feedback-error" class="banner banner-danger hidden"></div>
-        <div class="segmented segmented-4" id="feedback-filter" role="tablist">
-          <button type="button" class="segment is-active" data-category="all">الكل</button>
-          <button type="button" class="segment" data-category="suggestion">اقتراح</button>
-          <button type="button" class="segment" data-category="issue">مشكلة</button>
-          <button type="button" class="segment" data-category="other">أخرى</button>
+        <div id="support-error" class="banner banner-danger hidden"></div>
+        <div class="segmented" id="support-tabs" role="tablist">
+          <button type="button" class="segment is-active" data-tab="support">طلبات الدعم</button>
+          <button type="button" class="segment" data-tab="suggestion">الاقتراحات</button>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>التاريخ</th>
-                <th>المستخدم</th>
-                <th>النوع</th>
-                <th>التفاصيل</th>
-                <th>الرسالة</th>
-                <th>الحالة</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="feedback-body">
-              <tr><td colspan="7" class="empty">جارٍ التحميل…</td></tr>
-            </tbody>
-          </table>
+
+        <div id="support-panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>المرجع</th>
+                  <th>آخر نشاط</th>
+                  <th>المستخدم</th>
+                  <th>النوع</th>
+                  <th>الأولوية</th>
+                  <th>الحالة</th>
+                  <th>آخر رسالة</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="support-body">
+                <tr><td colspan="8" class="empty">جارٍ التحميل…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="suggestions-panel" class="hidden">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>التاريخ</th>
+                  <th>المستخدم</th>
+                  <th>النوع</th>
+                  <th>الرسالة</th>
+                  <th>الحالة</th>
+                </tr>
+              </thead>
+              <tbody id="suggestions-body">
+                <tr><td colspan="5" class="empty">جارٍ التحميل…</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -394,6 +418,60 @@
         <button type="submit" class="btn btn-primary" id="btn-save-inspector">ترقية</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- ------------------------------------------------------- support dialog -->
+  <dialog id="support-dialog" class="dialog dialog-wide">
+    <div class="support-thread">
+      <header class="support-thread-head">
+        <div>
+          <h2 id="support-dialog-title">طلب دعم</h2>
+          <p id="support-dialog-meta" class="muted small"></p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-mini" data-close="support-dialog">إغلاق</button>
+      </header>
+
+      <div id="support-dialog-error" class="banner banner-danger hidden"></div>
+
+      <div class="support-controls">
+        <label class="field">
+          <span>الحالة</span>
+          <select id="support-status">
+            <option value="new">جديد</option>
+            <option value="in_progress">قيد المعالجة</option>
+            <option value="waiting_user">بانتظار المستخدم</option>
+            <option value="resolved">تم الحل</option>
+            <option value="closed">مغلق</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>الأولوية</span>
+          <select id="support-priority">
+            <option value="low">منخفضة</option>
+            <option value="normal">عادية</option>
+            <option value="high">عالية</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="support-messages" class="support-messages"></div>
+
+      <form id="support-reply-form" method="dialog">
+        <label class="field field-full">
+          <span>ردّك</span>
+          <textarea id="support-reply-body" rows="3" maxlength="4000"
+                    placeholder="اكتب رداً للمستخدم…"></textarea>
+        </label>
+        <label class="field field-check">
+          <input type="checkbox" id="support-internal">
+          <span>ملاحظة داخلية (لا تظهر للمستخدم)</span>
+        </label>
+        <div class="dialog-actions">
+          <button type="button" class="btn btn-ghost" data-close="support-dialog">إغلاق</button>
+          <button type="submit" class="btn btn-primary" id="btn-send-support">إرسال الرد</button>
+        </div>
+      </form>
+    </div>
   </dialog>
 
   <div id="toast" class="toast hidden"></div>

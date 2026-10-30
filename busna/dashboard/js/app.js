@@ -9,8 +9,10 @@ const state = {
   routes: [],
   inspectors: [],
   users: [],
-  feedback: [],
-  feedbackCategory: 'all',
+  support: [],
+  supportTab: 'support',
+  supportActive: null,
+  supportThread: [],
   routeEditingId: null,
   inspectorEditingId: null,
   inspectorMode: 'id',
@@ -148,7 +150,7 @@ function showView(name) {
   if (target === 'overview') loadOverview();
   if (target === 'routes') loadRoutes();
   if (target === 'inspectors') loadInspectors();
-  if (target === 'feedback') loadFeedback();
+  if (target === 'feedback') loadSupport();
   if (target === 'users') loadUsers();
   if (target === 'tools') loadTools();
 }
@@ -709,28 +711,59 @@ async function saveUserRole(userId) {
   }
 }
 
-// --------------------------------------------------------------- feedback --
+// -------------------------------------------------------- support requests --
 
-const FEEDBACK_CATEGORY_LABELS = {
+const SUPPORT_CATEGORY_LABELS = {
   suggestion: 'اقتراح',
   issue: 'مشكلة',
   other: 'أخرى',
 };
 
-const FEEDBACK_STATUS_LABELS = {
+const SUPPORT_STATUS_LABELS = {
   new: 'جديد',
-  reviewed: 'تمت المراجعة',
+  in_progress: 'قيد المعالجة',
+  waiting_user: 'بانتظار المستخدم',
   resolved: 'تم الحل',
+  closed: 'مغلق',
 };
 
-async function loadFeedback(trigger = null) {
-  const errorBox = $('#feedback-error');
+const SUPPORT_PRIORITY_LABELS = {
+  low: 'منخفضة',
+  normal: 'عادية',
+  high: 'عالية',
+};
+
+const SUPPORT_STATUS_OPTIONS = ['new', 'in_progress', 'waiting_user', 'resolved', 'closed'];
+
+function supportStatusClass(status) {
+  return {
+    new: 'badge-off',
+    in_progress: 'badge-warn',
+    waiting_user: 'badge-info',
+    resolved: 'badge-ok',
+    closed: 'badge-off',
+  }[status] || 'badge-off';
+}
+
+function priorityClass(priority) {
+  return { high: 'badge-danger', low: 'badge-off' }[priority] || 'badge-warn';
+}
+
+// A request is unread when the user wrote after the last time an admin opened it.
+function isSupportUnread(row) {
+  if (!row.admin_last_read_at) return true;
+  return new Date(row.last_activity_at) > new Date(row.admin_last_read_at);
+}
+
+async function loadSupport(trigger = null) {
+  const errorBox = $('#support-error');
   errorBox.classList.add('hidden');
 
   return withBusy(trigger, async () => {
     try {
-      state.feedback = await api.fetchFeedback();
-      renderFeedback();
+      state.support = await api.fetchSupportRequests(state.supportTab);
+      renderSupport();
+      updateSupportBadge();
     } catch (error) {
       errorBox.textContent = error.message;
       errorBox.classList.remove('hidden');
@@ -738,49 +771,212 @@ async function loadFeedback(trigger = null) {
   });
 }
 
-function renderFeedback() {
-  const body = $('#feedback-body');
-  const rows = state.feedback.filter(
-    (row) => state.feedbackCategory === 'all' || row.category === state.feedbackCategory,
-  );
+async function updateSupportBadge() {
+  try {
+    const summary = await api.fetchSupportSummary();
+    const badge = $('.nav-item[data-view="feedback"] .nav-badge');
+    if (!badge) return;
+    const count = Number(summary.unread_count || 0);
+    badge.textContent = count > 99 ? '99+' : String(count);
+    badge.classList.toggle('hidden', count === 0);
+  } catch {
+    // The badge is decorative; the inbox itself surfaces load errors.
+  }
+}
 
-  if (!rows.length) {
-    body.innerHTML = '<tr><td colspan="7" class="empty">لا توجد ملاحظات في هذا التصنيف.</td></tr>';
+function renderSupport() {
+  const isSuggestion = state.supportTab === 'suggestion';
+  const target = $(isSuggestion ? '#suggestions-body' : '#support-body');
+
+  if (!state.support.length) {
+    target.innerHTML = `<tr><td colspan="8" class="empty">${
+      isSuggestion ? 'لا توجد اقتراحات.' : 'لا توجد طلبات دعم.'
+    }</td></tr>`;
     return;
   }
 
-  body.innerHTML = rows
+  target.innerHTML = state.support
     .map((row) => {
       const user = row.users || {};
+      const unread = isSupportUnread(row);
       const category =
         row.category === 'other'
           ? escapeHtml(row.other_label || 'أخرى')
-          : FEEDBACK_CATEGORY_LABELS[row.category] || row.category;
+          : SUPPORT_CATEGORY_LABELS[row.category] || escapeHtml(row.category);
       const status = row.status || 'new';
-      const next = status === 'new' ? 'reviewed' : status === 'reviewed' ? 'resolved' : 'new';
-      const nextLabel =
-        status === 'new' ? 'تمت المراجعة' : status === 'reviewed' ? 'تم الحل' : 'إعادة فتح';
-      const badge =
-        status === 'resolved' ? 'badge-ok' : status === 'reviewed' ? 'badge-warn' : 'badge-off';
+      const userCell = `${escapeHtml(user.full_name || '—')}
+        <div class="muted small">${escapeHtml(user.email || '')}</div>`;
+
+      if (isSuggestion) {
+        return `
+        <tr>
+          <td class="muted small">${formatStamp(row.created_at)}</td>
+          <td>${userCell}</td>
+          <td><span class="badge badge-info">${category}</span></td>
+          <td class="feedback-message">${escapeHtml(row.message)}</td>
+          <td>
+            <select class="inline-select" data-support-status="${row.id}">
+              ${SUPPORT_STATUS_OPTIONS.map(
+                (option) =>
+                  `<option value="${option}"${option === status ? ' selected' : ''}>${
+                    SUPPORT_STATUS_LABELS[option]
+                  }</option>`,
+              ).join('')}
+            </select>
+          </td>
+        </tr>`;
+      }
 
       return `
-      <tr>
-        <td class="muted small">${formatStamp(row.created_at)}</td>
+      <tr class="${unread ? 'is-unread' : ''}">
         <td>
-          ${escapeHtml(user.full_name || '—')}
-          <div class="muted small">${escapeHtml(user.email || '')}</div>
+          <button class="link-button" data-open-support="${row.id}" type="button">
+            <span class="unread-dot${unread ? '' : ' hidden'}"></span>
+            ${escapeHtml(row.reference || '—')}
+          </button>
         </td>
+        <td class="muted small">${formatStamp(row.last_activity_at || row.created_at)}</td>
+        <td>${userCell}</td>
         <td><span class="badge badge-info">${category}</span></td>
-        <td>${row.category === 'other' ? escapeHtml(row.other_label || '—') : '—'}</td>
+        <td>
+          <span class="badge ${priorityClass(row.priority)}">
+            ${SUPPORT_PRIORITY_LABELS[row.priority] || 'عادية'}
+          </span>
+        </td>
+        <td><span class="badge ${supportStatusClass(status)}">${
+          SUPPORT_STATUS_LABELS[status] || escapeHtml(status)
+        }</span></td>
         <td class="feedback-message">${escapeHtml(row.message)}</td>
-        <td><span class="badge ${badge}">${FEEDBACK_STATUS_LABELS[status] || status}</span></td>
         <td class="row-actions">
-          <button class="btn btn-mini" data-feedback-status="${row.id}"
-                  data-next-status="${next}" type="button">${nextLabel}</button>
+          <button class="btn btn-mini" data-open-support="${row.id}" type="button">فتح</button>
         </td>
       </tr>`;
     })
     .join('');
+}
+
+async function openSupportThread(id) {
+  const row = state.support.find((item) => String(item.id) === String(id));
+  if (!row) return;
+
+  state.supportActive = row;
+  state.supportThread = [];
+  $('#support-dialog-title').textContent = `طلب ${row.reference || ''}`;
+  $('#support-dialog-meta').textContent =
+    `${row.users?.full_name || 'مستخدم'} — ${formatStamp(row.created_at)}`;
+  $('#support-status').value = row.status || 'new';
+  $('#support-priority').value = row.priority || 'normal';
+  $('#support-reply-body').value = '';
+  $('#support-internal').checked = false;
+  $('#support-dialog-error').classList.add('hidden');
+  $('#support-messages').innerHTML = '<p class="empty">جارٍ تحميل المحادثة…</p>';
+
+  const dialog = $('#support-dialog');
+  if (!dialog.open) dialog.showModal();
+
+  await refreshSupportThread();
+}
+
+async function refreshSupportThread() {
+  const row = state.supportActive;
+  if (!row) return;
+
+  try {
+    state.supportThread = await api.fetchSupportThread(row.id);
+    renderSupportThread();
+    await api.markSupportRead(row.id);
+    row.admin_last_read_at = new Date().toISOString();
+    renderSupport();
+    updateSupportBadge();
+  } catch (error) {
+    $('#support-dialog-error').textContent = error.message;
+    $('#support-dialog-error').classList.remove('hidden');
+  }
+}
+
+function renderSupportThread() {
+  const box = $('#support-messages');
+  const row = state.supportActive;
+  if (!row) return;
+
+  const messages = [
+    {
+      author_role: 'user',
+      body: row.message,
+      created_at: row.created_at,
+      is_internal: false,
+      users: row.users,
+    },
+    ...state.supportThread,
+  ];
+
+  box.innerHTML = messages
+    .map((message) => {
+      const isAdmin = message.author_role === 'admin';
+      const internal = Boolean(message.is_internal);
+      const author = isAdmin
+        ? 'فريق الدعم'
+        : escapeHtml(message.users?.full_name || 'المستخدم');
+
+      return `
+      <div class="support-bubble ${isAdmin ? 'is-admin' : 'is-user'}${
+        internal ? ' is-internal' : ''
+      }">
+        <div class="support-bubble-head">
+          <span>${author}</span>
+          <span>${formatStamp(message.created_at)}</span>
+        </div>
+        ${internal ? '<span class="badge badge-warn">ملاحظة داخلية</span>' : ''}
+        <p>${escapeHtml(message.body)}</p>
+      </div>`;
+    })
+    .join('');
+
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendSupportReply(event) {
+  event.preventDefault();
+  const row = state.supportActive;
+  if (!row) return;
+
+  const body = $('#support-reply-body').value.trim();
+  if (!body) {
+    toast('اكتب نص الرد أولاً.');
+    return;
+  }
+
+  const internal = $('#support-internal').checked;
+  const button = $('#btn-send-support');
+
+  await withBusy(button, async () => {
+    try {
+      await api.replySupport(row.id, state.session.id, body, internal);
+      $('#support-reply-body').value = '';
+      $('#support-internal').checked = false;
+      toast(internal ? 'تم حفظ الملاحظة الداخلية.' : 'تم إرسال الرد.');
+      await refreshSupportThread();
+      await loadSupport();
+    } catch (error) {
+      $('#support-dialog-error').textContent = error.message;
+      $('#support-dialog-error').classList.remove('hidden');
+    }
+  });
+}
+
+async function changeSupportField(field, value) {
+  const row = state.supportActive;
+  if (!row) return;
+
+  try {
+    await api.updateSupport(row.id, { [field]: value });
+    row[field] = value;
+    toast('تم التحديث.');
+    await loadSupport();
+  } catch (error) {
+    $('#support-dialog-error').textContent = error.message;
+    $('#support-dialog-error').classList.remove('hidden');
+  }
 }
 
 // ------------------------------------------------------------------- tools --
@@ -1026,7 +1222,7 @@ function bindStatic() {
 
   $('#btn-refresh-overview').addEventListener('click', (event) => loadOverview(event.currentTarget));
   $('#btn-refresh-users').addEventListener('click', (event) => loadUsers(event.currentTarget));
-  $('#btn-refresh-feedback').addEventListener('click', (event) => loadFeedback(event.currentTarget));
+  $('#btn-refresh-support').addEventListener('click', (event) => loadSupport(event.currentTarget));
   $('#btn-refresh-tools').addEventListener('click', (event) => loadTools(event.currentTarget));
   $('#btn-decode').addEventListener('click', () => analyzeToken(false));
   $('#btn-verify').addEventListener('click', () => analyzeToken(true));
@@ -1140,28 +1336,49 @@ function bindStatic() {
     }
   });
 
-  $$('#feedback-filter .segment').forEach((button) => {
+  $$('#support-tabs .segment').forEach((button) => {
     button.addEventListener('click', () => {
-      state.feedbackCategory = button.dataset.category;
-      $$('#feedback-filter .segment').forEach((item) =>
+      if (state.supportTab === button.dataset.tab) return;
+      state.supportTab = button.dataset.tab;
+      $$('#support-tabs .segment').forEach((item) =>
         item.classList.toggle('is-active', item === button),
       );
-      renderFeedback();
+      $('#support-panel').classList.toggle('hidden', state.supportTab !== 'support');
+      $('#suggestions-panel').classList.toggle('hidden', state.supportTab !== 'suggestion');
+      loadSupport();
     });
   });
 
-  $('#feedback-body').addEventListener('click', async (event) => {
-    const button = event.target.closest('[data-feedback-status]');
-    if (!button) return;
-    await withBusy(button, async () => {
-      try {
-        await api.setFeedbackStatus(button.dataset.feedbackStatus, button.dataset.nextStatus);
-        await loadFeedback();
-      } catch (error) {
-        toast(error.message);
-      }
-    });
+  $('#support-body').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-open-support]');
+    if (button) openSupportThread(button.dataset.openSupport);
   });
+
+  $('#suggestions-body').addEventListener('change', async (event) => {
+    const select = event.target.closest('[data-support-status]');
+    if (!select) return;
+    try {
+      await api.updateSupport(select.dataset.supportStatus, { status: select.value });
+      toast('تم تحديث الحالة.');
+      await loadSupport();
+    } catch (error) {
+      toast(error.message);
+    }
+  });
+
+  $('#support-dialog').addEventListener('close', () => {
+    state.supportActive = null;
+    state.supportThread = [];
+    loadSupport();
+  });
+
+  $('#support-reply-form').addEventListener('submit', sendSupportReply);
+  $('#support-status').addEventListener('change', (event) =>
+    changeSupportField('status', event.target.value),
+  );
+  $('#support-priority').addEventListener('change', (event) =>
+    changeSupportField('priority', event.target.value),
+  );
 
   $('#users-body').addEventListener('click', (event) => {
     const save = event.target.closest('[data-save-role]');

@@ -281,21 +281,66 @@ export async function verifyTicketToken(token) {
   return data?.[0] || null;
 }
 
-// ---------------------------------------------------------------- feedback --
+// -------------------------------------------------------- support requests --
 
-export async function fetchFeedback() {
-  const { data, error } = await supabase
+const SUPPORT_FIELDS =
+  'id, reference, category, other_label, message, status, priority, created_at, ' +
+  'last_activity_at, admin_last_read_at, resolved_at, closed_at, ' +
+  'users(full_name, email, phone)';
+
+// `category` is either 'support' (issues and other tickets) or 'suggestion'.
+export async function fetchSupportRequests(category = 'support') {
+  let query = supabase
     .from('feedback')
-    .select('id, category, other_label, message, status, created_at, users(full_name, email, phone)')
-    .order('created_at', { ascending: false })
+    .select(SUPPORT_FIELDS)
+    .order('last_activity_at', { ascending: false })
     .limit(300);
+
+  query =
+    category === 'suggestion'
+      ? query.eq('category', 'suggestion')
+      : query.in('category', ['issue', 'other']);
+
+  const { data, error } = await query;
   if (error) throw new Error(mapError(error));
   return data || [];
 }
 
-export async function setFeedbackStatus(id, status) {
-  const { error } = await supabase.from('feedback').update({ status }).eq('id', id);
+export async function fetchSupportThread(id) {
+  const { data, error } = await supabase
+    .from('feedback_messages')
+    .select('id, author_id, author_role, body, is_internal, created_at, users(full_name, email)')
+    .eq('feedback_id', id)
+    .order('created_at', { ascending: true });
   if (error) throw new Error(mapError(error));
+  return data || [];
+}
+
+export async function replySupport(id, authorId, body, isInternal = false) {
+  const { error } = await supabase.from('feedback_messages').insert({
+    feedback_id: id,
+    author_id: authorId,
+    author_role: 'admin',
+    body,
+    is_internal: isInternal,
+  });
+  if (error) throw new Error(mapError(error));
+}
+
+export async function updateSupport(id, patch) {
+  const { error } = await supabase.from('feedback').update(patch).eq('id', id);
+  if (error) throw new Error(mapError(error));
+}
+
+export async function markSupportRead(id) {
+  const { error } = await supabase.rpc('mark_feedback_read', { p_id: id });
+  if (error) throw new Error(mapError(error));
+}
+
+export async function fetchSupportSummary() {
+  const { data, error } = await supabase.rpc('support_admin_summary');
+  if (error) throw new Error(mapError(error));
+  return data?.[0] || { open_count: 0, waiting_count: 0, unread_count: 0 };
 }
 
 // ------------------------------------------------------------- route stops --
