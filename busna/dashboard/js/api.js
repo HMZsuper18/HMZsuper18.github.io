@@ -29,7 +29,7 @@ export function mapError(error) {
   if (code === '22P02' || message.includes('invalid input syntax')) {
     return 'صيغة البيانات غير صحيحة. راجع الحقول.';
   }
-  return GENERIC_ERROR;
+  return message ? `${GENERIC_ERROR} (${message})` : GENERIC_ERROR;
 }
 
 // ---------------------------------------------------------------- session --

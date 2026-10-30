@@ -238,22 +238,52 @@ async function loadOverview(trigger = null) {
   errorBox.classList.add('hidden');
 
   return withBusy(trigger, async () => {
-    try {
-      const [stats, bookings, summary, earnings, collections] = await Promise.all([
+    const [statsRes, bookingsRes, summaryRes, earningsRes, collectionsRes] =
+      await Promise.allSettled([
         api.fetchStats(),
         api.fetchRecentBookings(),
         api.fetchDashboardSummary(),
         api.fetchEarnings(state.earningsRange),
         api.fetchInspectorCollections(),
       ]);
-      renderStats(stats, summary);
-      renderBookings(bookings.rows);
-      renderCollections(collections);
-      renderCharts(earnings);
-      renderListNotice('overview', bookings.rows.length, bookings.total);
-    } catch (error) {
-      errorBox.textContent = error.message;
+
+    const problems = [];
+    const reason = (result) => result.reason?.message || String(result.reason);
+
+    renderStats(
+      statsRes.status === 'fulfilled' ? statsRes.value : null,
+      summaryRes.status === 'fulfilled' ? summaryRes.value : {},
+    );
+    if (statsRes.status === 'rejected') problems.push(`الإحصائيات: ${reason(statsRes)}`);
+    if (summaryRes.status === 'rejected') problems.push(`الملخص: ${reason(summaryRes)}`);
+
+    if (bookingsRes.status === 'fulfilled') {
+      renderBookings(bookingsRes.value.rows);
+      renderListNotice('overview', bookingsRes.value.rows.length, bookingsRes.value.total);
+    } else {
+      problems.push(`الحجوزات: ${reason(bookingsRes)}`);
+    }
+
+    if (collectionsRes.status === 'fulfilled') {
+      renderCollections(collectionsRes.value);
+    } else {
+      problems.push(`تحصيلات المفتشين: ${reason(collectionsRes)}`);
+    }
+
+    if (earningsRes.status === 'fulfilled') {
+      try {
+        renderCharts(earningsRes.value);
+      } catch (error) {
+        problems.push(`الرسوم: ${error.message}`);
+      }
+    } else {
+      problems.push(`الأرباح: ${reason(earningsRes)}`);
+    }
+
+    if (problems.length) {
+      errorBox.textContent = problems.join(' • ');
       errorBox.classList.remove('hidden');
+      console.error('overview problems:', problems);
     }
   });
 }
