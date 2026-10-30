@@ -160,9 +160,11 @@ code {
   display: grid;
   grid-template-columns: 264px 1fr;
   min-height: 100vh;
+  min-width: 0;
 }
 
 .sidebar {
+  min-width: 0;
   background: var(--navy);
   color: var(--on-navy);
   display: flex;
@@ -329,6 +331,7 @@ code {
 .main {
   padding: 32px clamp(16px, 4vw, 48px) 64px;
   max-width: 1200px;
+  min-width: 0;
 }
 
 .view-head {
@@ -1227,5 +1230,32 @@ tr.is-unread td {
 
   .stat-wide {
     grid-column: span 1;
+  }
+}
+
+/* Final mobile overrides: keep the nav in one scrollable row. */
+@media (max-width: 900px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    height: auto;
+    flex-wrap: wrap;
+  }
+
+  .nav {
+    order: 3;
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .nav-item {
+    white-space: nowrap;
+  }
+
+  .topbar {
+    position: static;
   }
 }
