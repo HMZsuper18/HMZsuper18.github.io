@@ -1,4 +1,4 @@
-import * as api from './api.js';
+import * as api from './api.js?v=20261031b';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
