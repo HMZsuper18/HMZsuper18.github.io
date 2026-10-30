@@ -298,42 +298,61 @@ a:hover {
   color: var(--muted);
 }
 
-.cards {
+.feature-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 
-.card {
+.feature {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: 22px;
 }
 
-.card-icon {
+.feature-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;
+  border-radius: 14px;
   background: var(--accent-soft);
   color: var(--navy);
-  font-weight: 800;
-  margin-bottom: 12px;
 }
 
-.card h3 {
-  margin: 0 0 6px;
+.feature-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.feature h3 {
+  margin: 0;
   font-size: 1.05rem;
   color: var(--navy);
 }
 
-.card p {
+.feature p {
   margin: 0;
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+@media (max-width: 900px) {
+  .feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .route-steps {
