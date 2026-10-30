@@ -109,7 +109,7 @@ export async function fetchStats() {
 export async function fetchRecentBookings(limit = 12) {
   const columns =
     'id, seat_num, travel_date, payment_method, paid, status, created_at, ' +
-    'users(full_name, phone), routes(code, origin, destination, move_time, price)';
+    'users!bookings_user_id_fkey(full_name, phone), routes(code, origin, destination, move_time, price)';
   const [result, countResult] = await Promise.all([
     supabase.from('bookings').select(columns).order('created_at', { ascending: false }).limit(limit),
     supabase.from('bookings').select('*', { count: 'exact', head: true }),
