@@ -868,6 +868,265 @@ tr.is-unread td {
   padding: 0;
 }
 
+/* ------------------------------------------------------------- topbar */
+
+.topbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  padding: 6px 0;
+  background: linear-gradient(var(--cream) 70%, transparent);
+}
+
+.icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--navy);
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.icon-btn .nav-badge {
+  position: absolute;
+  top: -5px;
+  inset-inline-start: -5px;
+  margin: 0;
+}
+
+.notif-wrap {
+  position: relative;
+}
+
+.notif-panel {
+  position: absolute;
+  inset-inline-end: 0;
+  top: 50px;
+  width: min(380px, calc(100vw - 24px));
+  max-height: 440px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(8, 26, 46, 0.22);
+  z-index: 60;
+}
+
+.notif-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+
+.notif-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.notif-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  text-align: right;
+  font: inherit;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.notif-item:hover {
+  background: rgba(46, 125, 209, 0.05);
+}
+
+.notif-item.is-unread {
+  background: rgba(242, 169, 59, 0.08);
+}
+
+.notif-meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------- charts */
+
+.chart-card {
+  margin-top: 26px;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.chart-head .section-title {
+  margin: 0;
+}
+
+.chart-wrap {
+  position: relative;
+  height: 270px;
+}
+
+.chart-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.segmented-3 {
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 300px;
+  margin-bottom: 0;
+}
+
+/* ------------------------------------------------------------- filters */
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.filter-bar input,
+.filter-bar select {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  min-width: 150px;
+}
+
+.filter-bar input[type='search'] {
+  flex: 1 1 240px;
+}
+
+.person-bookings {
+  max-height: 60vh;
+  overflow: auto;
+}
+
+/* ---------------------------------------------------- responsive extras */
+
+@media (max-width: 900px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    flex: 0 0 auto;
+  }
+
+  .nav {
+    order: 3;
+    flex: 1 1 100%;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-top: 0;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+  }
+
+  .nav-item {
+    white-space: nowrap;
+    padding: 8px 11px;
+    font-size: 0.88rem;
+  }
+
+  .sidebar-foot {
+    margin-inline-start: auto;
+  }
+
+  .topbar {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .main {
+    padding: 16px 12px 48px;
+  }
+
+  .view-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .view-head .btn {
+    align-self: flex-start;
+  }
+
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stat-wide {
+    grid-column: span 2;
+  }
+
+  .filter-bar > * {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .dialog,
+  .dialog-wide {
+    width: calc(100vw - 16px);
+  }
+
+  .support-thread {
+    padding: 16px;
+    max-height: 90vh;
+  }
+
+  .chart-wrap {
+    height: 220px;
+  }
+
+  .notif-panel {
+    inset-inline-end: -6px;
+  }
+}
+
 .mode-panel .field + .hint {
   margin-top: 8px;
 }

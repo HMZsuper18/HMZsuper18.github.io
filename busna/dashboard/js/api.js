@@ -44,6 +44,8 @@ export const ROLE_LABELS = {
 // Roles that can be granted from the role manager. Anything else is decided
 // in SQL and is not offered here.
 export const ASSIGNABLE_ROLES = ['student', 'analyst', 'inspector', 'admin'];
+// A regular admin may not grant admin-level roles.
+export const ADMIN_ROLE_OPTIONS = ['student', 'analyst', 'inspector'];
 
 export async function fetchSession() {
   const { data, error } = await supabase.auth.getUser();
@@ -78,6 +80,7 @@ export async function fetchSession() {
     canViewOverview: Boolean(grants.can_view_overview),
     canManage: Boolean(grants.can_manage),
     canEditUsers: Boolean(grants.can_edit_users),
+    canAssignAdmin: Boolean(grants.can_assign_admin),
     canUseTools: Boolean(grants.can_use_tools),
   };
 }
@@ -343,12 +346,109 @@ export async function fetchSupportSummary() {
   return data?.[0] || { open_count: 0, waiting_count: 0, unread_count: 0 };
 }
 
+// ---------------------------------------------------------------- people --
+
+export async function fetchPeople(filters = {}) {
+  const { data, error } = await supabase.rpc('dashboard_people', {
+    p_search: filters.search || null,
+    p_governorate: filters.governorate || null,
+    p_role: filters.role || null,
+    p_min_compliance:
+      filters.minCompliance == null || filters.minCompliance === ''
+        ? null
+        : Number(filters.minCompliance),
+  });
+  if (error) throw new Error(mapError(error));
+  return data || [];
+}
+
+export async function fetchPersonBookings(userId) {
+  const { data, error } = await supabase.rpc('dashboard_person_bookings', {
+    p_user_id: userId,
+  });
+  if (error) throw new Error(mapError(error));
+  return data || [];
+}
+
+// -------------------------------------------------------------- earnings --
+
+export async function fetchEarnings(granularity = 'day') {
+  const { data, error } = await supabase.rpc('dashboard_earnings', {
+    p_granularity: granularity,
+  });
+  if (error) throw new Error(mapError(error));
+  return data || [];
+}
+
+export async function fetchDashboardSummary() {
+  const { data, error } = await supabase.rpc('dashboard_summary');
+  if (error) throw new Error(mapError(error));
+  return data?.[0] || {};
+}
+
+export async function fetchInspectorCollections() {
+  const { data, error } = await supabase.rpc('dashboard_inspector_collections');
+  if (error) throw new Error(mapError(error));
+  return data || [];
+}
+
+// --------------------------------------------------------- subscriptions --
+
+export async function fetchSubscriptionPlans() {
+  const { data, error } = await supabase
+    .from('subscription_plans')
+    .select('id, code, name_ar, duration_days, price, is_active, sort_order')
+    .order('sort_order');
+  if (error) throw new Error(mapError(error));
+  return data || [];
+}
+
+export async function saveSubscriptionPlan(plan) {
+  const { error } = await supabase.rpc('dashboard_set_plan', {
+    p_id: plan.id,
+    p_price: Number(plan.price),
+    p_duration_days: Number(plan.duration_days),
+    p_is_active: Boolean(plan.is_active),
+  });
+  if (error) throw new Error(mapError(error));
+}
+
+export async function fetchSubscriptions({ status = null, governorate = null } = {}) {
+  const { data, error } = await supabase.rpc('dashboard_subscriptions', {
+    p_status: status,
+    p_governorate: governorate,
+  });
+  if (error) throw new Error(mapError(error));
+  return data || [];
+}
+
+export async function collectSubscription(id) {
+  const { error } = await supabase.rpc('collect_subscription', { p_id: id });
+  if (error) throw new Error(mapError(error));
+}
+
+// ------------------------------------------------- feedback notifications --
+
+export async function fetchFeedbackNotifications(limit = 20) {
+  const { data, error } = await supabase
+    .from('feedback')
+    .select(
+      'id, reference, category, other_label, message, status, created_at, users(full_name, email)',
+    )
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(mapError(error));
+  return data || [];
+}
+
 // ------------------------------------------------------------- route stops --
 
 export async function fetchRouteStops(routeId) {
   const { data, error } = await supabase
     .from('route_stops')
-    .select('id, route_id, seq, name, price')
+    .select(
+      'id, route_id, seq, name, price, governorate, latitude, longitude, maps_url, description',
+    )
     .eq('route_id', routeId)
     .order('seq');
   if (error) throw new Error(mapError(error));
@@ -369,6 +469,11 @@ export async function replaceRouteStops(routeId, stops) {
       seq: index + 1,
       name: stop.name,
       price: stop.price,
+      governorate: stop.governorate || null,
+      latitude: stop.latitude ?? null,
+      longitude: stop.longitude ?? null,
+      maps_url: stop.maps_url || null,
+      description: stop.description || null,
     })),
   );
   if (error) throw new Error(mapError(error));

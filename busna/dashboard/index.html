@@ -77,6 +77,9 @@
           <span class="nav-dot"></span> طلبات الدعم
           <span class="nav-badge hidden">0</span>
         </button>
+        <button class="nav-item hidden" data-view="subscriptions" type="button">
+          <span class="nav-dot"></span> الاشتراكات
+        </button>
         <button class="nav-item hidden" data-view="users" type="button">
           <span class="nav-dot"></span> المستخدمون
         </button>
@@ -95,6 +98,28 @@
 
     <main class="main">
 
+      <div class="topbar">
+        <div class="notif-wrap">
+          <button id="btn-notifications" class="icon-btn" type="button" aria-label="الإشعارات">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path fill="currentColor" d="M12 22a2.6 2.6 0 0 0 2.6-2.6h-5.2A2.6 2.6 0 0 0 12 22Zm7-6.3V10a7 7 0 0 0-5.4-6.8V2.6a1.6 1.6 0 1 0-3.2 0v.6A7 7 0 0 0 5 10v5.7l-1.7 1.7a1 1 0 0 0 .7 1.7h16a1 1 0 0 0 .7-1.7Z"/>
+            </svg>
+            <span id="notif-badge" class="nav-badge hidden">0</span>
+          </button>
+          <div id="notif-panel" class="notif-panel hidden">
+            <div class="notif-head">
+              <strong>الإشعارات</strong>
+              <button id="btn-enable-notifications" class="btn btn-mini" type="button">
+                تفعيل إشعارات المتصفح
+              </button>
+            </div>
+            <div id="notif-list" class="notif-list">
+              <p class="empty">لا توجد إشعارات.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ---------------------------------------------------------- overview -->
       <section id="view-overview" class="view">
         <header class="view-head">
@@ -106,6 +131,50 @@
         </header>
         <div id="overview-error" class="banner banner-danger hidden"></div>
         <div id="stat-grid" class="stat-grid"></div>
+
+        <div class="chart-card">
+          <div class="chart-head">
+            <h2 class="section-title">الأرباح</h2>
+            <div class="segmented segmented-3" id="earnings-range" role="tablist">
+              <button type="button" class="segment is-active" data-range="day">يومي</button>
+              <button type="button" class="segment" data-range="week">أسبوعي</button>
+              <button type="button" class="segment" data-range="month">شهري</button>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="earnings-chart" height="240"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-head">
+            <h2 class="section-title">حركة الحجوزات</h2>
+            <span id="bookings-range-label" class="muted small"></span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="bookings-chart" height="220"></canvas>
+          </div>
+        </div>
+
+        <h2 class="section-title">تحصيلات المفتشين</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>المفتش</th>
+                <th>تذاكر نقدية</th>
+                <th>عدد التذاكر</th>
+                <th>اشتراكات</th>
+                <th>عدد الاشتراكات</th>
+                <th>الإجمالي</th>
+              </tr>
+            </thead>
+            <tbody id="collections-body">
+              <tr><td colspan="6" class="empty">جارٍ التحميل…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
         <h2 class="section-title">آخر الحجوزات</h2>
         <div class="table-wrap">
           <table>
@@ -169,20 +238,33 @@
           <button id="btn-add-inspector" class="btn btn-primary" type="button">+ ترقية مفتش</button>
         </header>
         <div id="inspectors-error" class="banner banner-danger hidden"></div>
+        <div class="filter-bar" id="inspectors-filters">
+          <input id="inspectors-search" type="search" placeholder="ابحث بالاسم أو البريد أو الهاتف…">
+          <select id="inspectors-governorate">
+            <option value="">كل المحافظات</option>
+            <option value="sharkia">الشرقية</option>
+            <option value="ismailia">الإسماعيلية</option>
+          </select>
+          <input id="inspectors-compliance" type="number" min="0" max="100"
+                 placeholder="حد الامتثال %">
+          <button id="btn-apply-inspectors" class="btn btn-ghost" type="button">تصفية</button>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>البريد الإلكتروني</th>
-                <th>الاسم</th>
+                <th>المفتش</th>
                 <th>الهاتف</th>
+                <th>المحافظة</th>
+                <th>الامتثال</th>
+                <th>آخر 5 تذاكر</th>
                 <th>حساب التطبيق</th>
                 <th>التفعيل</th>
                 <th></th>
               </tr>
             </thead>
             <tbody id="inspectors-body">
-              <tr><td colspan="6" class="empty">جارٍ التحميل…</td></tr>
+              <tr><td colspan="8" class="empty">جارٍ التحميل…</td></tr>
             </tbody>
           </table>
         </div>
@@ -247,31 +329,124 @@
         </div>
       </section>
 
+      <!-- -------------------------------------------------------- subscriptions -->
+      <section id="view-subscriptions" class="view hidden">
+        <header class="view-head">
+          <div>
+            <h1>الاشتراكات</h1>
+            <p class="muted">طلبات الاشتراك الشهري والأسبوعي والترم، وتحصيل المدفوعات.</p>
+          </div>
+          <button id="btn-refresh-subscriptions" class="btn btn-ghost" type="button">تحديث</button>
+        </header>
+        <div id="subscriptions-error" class="banner banner-danger hidden"></div>
+        <div class="segmented" id="subscription-tabs" role="tablist">
+          <button type="button" class="segment is-active" data-tab="requests">الطلبات</button>
+          <button type="button" class="segment" data-tab="plans">الخطط</button>
+        </div>
+
+        <div id="subscription-requests-panel">
+          <div class="filter-bar">
+            <select id="subscriptions-status">
+              <option value="">كل الحالات</option>
+              <option value="pending">بانتظار التحصيل</option>
+              <option value="active">نشط</option>
+              <option value="expired">منتهي</option>
+              <option value="cancelled">ملغي</option>
+            </select>
+            <select id="subscriptions-governorate">
+              <option value="">كل المحافظات</option>
+              <option value="sharkia">الشرقية</option>
+              <option value="ismailia">الإسماعيلية</option>
+            </select>
+            <button id="btn-apply-subscriptions" class="btn btn-ghost" type="button">تصفية</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>الطالب</th>
+                  <th>المحافظة</th>
+                  <th>الخطة</th>
+                  <th>القيمة</th>
+                  <th>الحالة</th>
+                  <th>الدفع</th>
+                  <th>تاريخ الطلب</th>
+                  <th>المحصّل</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="subscriptions-body">
+                <tr><td colspan="9" class="empty">جارٍ التحميل…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="subscription-plans-panel" class="hidden">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>الخطة</th>
+                  <th>المدة</th>
+                  <th>السعر</th>
+                  <th>مفعّلة</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="plans-body">
+                <tr><td colspan="5" class="empty">جارٍ التحميل…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <!-- ------------------------------------------------------------- users -->
       <section id="view-users" class="view hidden">
         <header class="view-head">
           <div>
             <h1>المستخدمون</h1>
             <p id="users-hint" class="muted">
-              دور واحد لكل حساب. لا يمكنك تغيير دورك بنفسك.
+              دور واحد لكل حساب. المدير العام فقط يعدّل حسابات الإدارة.
             </p>
           </div>
           <button id="btn-refresh-users" class="btn btn-ghost" type="button">تحديث</button>
         </header>
         <div id="users-error" class="banner banner-danger hidden"></div>
+        <div class="filter-bar" id="users-filters">
+          <input id="users-search" type="search" placeholder="ابحث بالاسم أو البريد أو الهاتف…">
+          <select id="users-governorate">
+            <option value="">كل المحافظات</option>
+            <option value="sharkia">الشرقية</option>
+            <option value="ismailia">الإسماعيلية</option>
+          </select>
+          <select id="users-role">
+            <option value="">كل الأدوار</option>
+            <option value="student">طالب</option>
+            <option value="analyst">محلل</option>
+            <option value="inspector">مفتش</option>
+            <option value="admin">مدير</option>
+          </select>
+          <input id="users-compliance" type="number" min="0" max="100"
+                 placeholder="حد الامتثال %">
+          <button id="btn-apply-users" class="btn btn-ghost" type="button">تصفية</button>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>الاسم</th>
-                <th>البريد الإلكتروني</th>
+                <th>المستخدم</th>
                 <th>الهاتف</th>
+                <th>المحافظة</th>
+                <th>الامتثال</th>
+                <th>آخر 5 تذاكر</th>
                 <th>الدور</th>
                 <th></th>
               </tr>
             </thead>
             <tbody id="users-body">
-              <tr><td colspan="5" class="empty">جارٍ التحميل…</td></tr>
+              <tr><td colspan="7" class="empty">جارٍ التحميل…</td></tr>
             </tbody>
           </table>
         </div>
@@ -358,10 +533,13 @@
         </label>
       </div>
       <label class="field field-full">
-        <span>المحطات (سطر لكل محطة: الاسم | السعر التراكمي من البداية)</span>
-        <textarea name="stops" rows="4" spellcheck="false"
-                  placeholder="القاهرة | 0&#10;طنطا | 40&#10;الإسكندرية | 100"></textarea>
-        <span class="hint muted">اتركها فارغة لمسار من محطتين (من/إلى). أول محطة سعرها 0 عادةً.</span>
+        <span>المحطات (سطر لكل محطة: الاسم | السعر | المحافظة | الموقع)</span>
+        <textarea name="stops" rows="5" spellcheck="false"
+                  placeholder="أبو حماد | 0 | sharkia | 30.543,31.678&#10;التل الكبير | 40 | ismailia | https://maps.app.goo.gl/...&#10;القصاصين | 100 | ismailia | أمام مسجد القصاصين"></textarea>
+        <span class="hint muted">
+          المحافظة: sharkia أو ismailia. الموقع: إحداثيات (lat,lng) أو رابط خرائط أو وصف.
+          اتركها فارغة لمسار من محطتين (من/إلى).
+        </span>
       </label>
       <label class="field field-check">
         <input name="is_active" type="checkbox" checked>
@@ -474,8 +652,70 @@
     </div>
   </dialog>
 
+  <!-- -------------------------------------------------------- person dialog -->
+  <dialog id="person-dialog" class="dialog dialog-wide">
+    <div class="support-thread">
+      <header class="support-thread-head">
+        <div>
+          <h2 id="person-dialog-title">آخر 5 تذاكر</h2>
+          <p id="person-dialog-meta" class="muted small"></p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-mini" data-close="person-dialog">إغلاق</button>
+      </header>
+      <div id="person-dialog-error" class="banner banner-danger hidden"></div>
+      <div class="table-wrap person-bookings">
+        <table>
+          <thead>
+            <tr>
+              <th>التاريخ</th>
+              <th>الرحلة</th>
+              <th>المقعد</th>
+              <th>الصعود / النزول</th>
+              <th>الأجرة</th>
+              <th>الدفع</th>
+              <th>الحالة</th>
+              <th>حجز في</th>
+              <th>صعد بواسطة</th>
+            </tr>
+          </thead>
+          <tbody id="person-bookings-body">
+            <tr><td colspan="9" class="empty">جارٍ التحميل…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ---------------------------------------------------------- plan dialog -->
+  <dialog id="plan-dialog" class="dialog">
+    <form id="plan-form" method="dialog">
+      <h2 id="plan-dialog-title">تعديل الخطة</h2>
+      <input type="hidden" name="plan_id">
+      <div class="field-grid">
+        <label class="field">
+          <span>السعر (ج.م)</span>
+          <input name="price" type="number" min="0" step="1" required>
+        </label>
+        <label class="field">
+          <span>المدة (أيام)</span>
+          <input name="duration_days" type="number" min="1" max="400" required>
+        </label>
+      </div>
+      <label class="field field-check">
+        <input name="is_active" type="checkbox">
+        <span>خطة مفعّلة</span>
+      </label>
+      <p class="error hidden" data-error-for="plan"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close="plan-dialog">إلغاء</button>
+        <button type="submit" class="btn btn-primary" id="btn-save-plan">حفظ</button>
+      </div>
+    </form>
+  </dialog>
+
   <div id="toast" class="toast hidden"></div>
 
+  <script src="js/vendor/chart.umd.min.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

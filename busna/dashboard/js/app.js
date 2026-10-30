@@ -13,10 +13,22 @@ const state = {
   supportTab: 'support',
   supportActive: null,
   supportThread: [],
-  routeEditingId: null,
-  inspectorEditingId: null,
-  inspectorMode: 'id',
-  inspectorUser: null,
+  people: { users: [], inspectors: [] },
+  peopleFilters: {
+    users: { search: '', governorate: '', role: '', minCompliance: '' },
+    inspectors: { search: '', governorate: '', minCompliance: '' },
+  },
+  earningsRange: 'day',
+  earnings: [],
+  charts: { earnings: null, bookings: null },
+  subscriptions: [],
+  subscriptionPlans: [],
+  subscriptionTab: 'requests',
+  subscriptionFilters: { status: '', governorate: '' },
+  planEditingId: null,
+  notifications: [],
+  notifLastSeen: localStorage.getItem('busna.notifLastSeen') || '',
+  notifTimer: null,
 };
 
 // ------------------------------------------------------------------ boot --
@@ -64,7 +76,7 @@ function allowedViews(session) {
     // Analysts see every screen, just read-only.
     views.push('overview', 'routes', 'inspectors', 'users');
   }
-  if (session.canManage) views.push('feedback');
+  if (session.canManage) views.push('feedback', 'subscriptions');
   if (session.canUseTools) views.push('tools');
   return views;
 }
@@ -96,13 +108,23 @@ function renderGate(session) {
   $('#btn-add-route').classList.toggle('hidden', !session.canManage);
   $('#btn-add-inspector').classList.toggle('hidden', !session.canManage);
   $('#users-hint').textContent = session.canEditUsers
-    ? 'دور واحد لكل حساب. لا يمكنك تغيير دورك بنفسك.'
+    ? session.canAssignAdmin
+      ? 'دور واحد لكل حساب. لا يمكنك تغيير دورك بنفسك.'
+      : 'يمكنك تعديل الطلاب والمحللين والمفتشين. حسابات الإدارة للمدير العام فقط.'
     : 'عرض فقط. تغيير الأدوار غير متاح لهذا الحساب.';
 
   $('#account-email').textContent = session.email;
   $('#account-role').textContent = session.roleLabel;
   $('#app').classList.remove('hidden');
+  $('.topbar').classList.toggle('hidden', !session.canManage);
   showView(views.includes(currentView()) ? currentView() : views[0]);
+  if (session.canManage) startNotificationPolling();
+}
+
+function startNotificationPolling() {
+  if (state.notifTimer) return;
+  loadNotifications();
+  state.notifTimer = setInterval(loadNotifications, 30000);
 }
 
 function showFatal(message) {
@@ -129,7 +151,15 @@ function consumeOAuthError() {
 
 // ------------------------------------------------------------------ views --
 
-const VIEWS = ['overview', 'routes', 'inspectors', 'feedback', 'users', 'tools'];
+const VIEWS = [
+  'overview',
+  'routes',
+  'inspectors',
+  'feedback',
+  'subscriptions',
+  'users',
+  'tools',
+];
 
 function currentView() {
   const hash = window.location.hash.replace('#', '');
@@ -151,6 +181,7 @@ function showView(name) {
   if (target === 'routes') loadRoutes();
   if (target === 'inspectors') loadInspectors();
   if (target === 'feedback') loadSupport();
+  if (target === 'subscriptions') loadSubscriptions();
   if (target === 'users') loadUsers();
   if (target === 'tools') loadTools();
 }
@@ -208,9 +239,17 @@ async function loadOverview(trigger = null) {
 
   return withBusy(trigger, async () => {
     try {
-      const [stats, bookings] = await Promise.all([api.fetchStats(), api.fetchRecentBookings()]);
-      renderStats(stats);
+      const [stats, bookings, summary, earnings, collections] = await Promise.all([
+        api.fetchStats(),
+        api.fetchRecentBookings(),
+        api.fetchDashboardSummary(),
+        api.fetchEarnings(state.earningsRange),
+        api.fetchInspectorCollections(),
+      ]);
+      renderStats(stats, summary);
       renderBookings(bookings.rows);
+      renderCollections(collections);
+      renderCharts(earnings);
       renderListNotice('overview', bookings.rows.length, bookings.total);
     } catch (error) {
       errorBox.textContent = error.message;
@@ -219,7 +258,11 @@ async function loadOverview(trigger = null) {
   });
 }
 
-function renderStats(stats) {
+function money(value) {
+  return `${num.format(Number(value || 0))} ج.م`;
+}
+
+function renderStats(stats, summary = {}) {
   const grid = $('#stat-grid');
   if (!stats) {
     grid.innerHTML = '<p class="empty">لا توجد بيانات.</p>';
@@ -234,13 +277,212 @@ function renderStats(stats) {
       </div>`,
   );
 
-  cards.push(`
+  cards.push(
+    `
     <div class="stat stat-wide">
-      <span class="stat-value">${num.format(Number(stats.app_revenue_today ?? 0))} <small>ج.م</small></span>
-      <span class="stat-label">إيراد اليوم (تطبيق)</span>
-    </div>`);
+      <span class="stat-value">${money(summary.today_revenue)}</span>
+      <span class="stat-label">أرباح اليوم</span>
+    </div>`,
+    `
+    <div class="stat">
+      <span class="stat-value">${money(summary.week_revenue)}</span>
+      <span class="stat-label">أرباح الأسبوع</span>
+    </div>`,
+    `
+    <div class="stat">
+      <span class="stat-value">${money(summary.month_revenue)}</span>
+      <span class="stat-label">أرباح الشهر</span>
+    </div>`,
+    `
+    <div class="stat">
+      <span class="stat-value">${num.format(Number(summary.active_subscriptions ?? 0))}</span>
+      <span class="stat-label">اشتراكات نشطة</span>
+    </div>`,
+    `
+    <div class="stat">
+      <span class="stat-value">${num.format(Number(summary.pending_subscriptions ?? 0))}</span>
+      <span class="stat-label">اشتراكات بانتظار التحصيل</span>
+    </div>`,
+  );
 
   grid.innerHTML = cards.join('');
+}
+
+const MONTHS_AR = [
+  'يناير',
+  'فبراير',
+  'مارس',
+  'أبريل',
+  'مايو',
+  'يونيو',
+  'يوليو',
+  'أغسطس',
+  'سبتمبر',
+  'أكتوبر',
+  'نوفمبر',
+  'ديسمبر',
+];
+
+function formatBucket(value, range) {
+  if (!value) return '';
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  if (range === 'month') {
+    return `${MONTHS_AR[date.getMonth()]} ${String(date.getFullYear()).slice(2)}`;
+  }
+  if (range === 'week') {
+    return `${date.getDate()}/${date.getMonth() + 1}`;
+  }
+  return `${date.getDate()}/${date.getMonth() + 1}`;
+}
+
+function chartOptions() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        position: 'bottom',
+        rtl: true,
+        labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Tajawal' } },
+      },
+      tooltip: {
+        rtl: true,
+        textDirection: 'rtl',
+        callbacks: {
+          label: (context) => `${context.dataset.label}: ${money(context.parsed.y)}`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: (value) => num.format(value),
+        },
+      },
+    },
+    elements: {
+      line: { tension: 0.35, borderWidth: 2.5 },
+      point: { radius: 2, hoverRadius: 5 },
+    },
+  };
+}
+
+function chartCountOptions() {
+  const options = chartOptions();
+  options.plugins.tooltip.callbacks.label = (context) =>
+    `${context.dataset.label}: ${num.format(context.parsed.y)}`;
+  return options;
+}
+
+function renderCharts(rows) {
+  state.earnings = rows;
+  if (!window.Chart) return;
+
+  const labels = rows.map((row) => formatBucket(row.bucket_start, state.earningsRange));
+  const ticketRevenue = rows.map((row) => Number(row.ticket_revenue || 0));
+  const subRevenue = rows.map((row) => Number(row.subscription_revenue || 0));
+  const totalRevenue = rows.map((row) => Number(row.total || 0));
+  const ticketCounts = rows.map((row) => Number(row.ticket_count || 0));
+  const subCounts = rows.map((row) => Number(row.subscription_count || 0));
+
+  const earningsData = {
+    labels,
+    datasets: [
+      {
+        label: 'أرباح التذاكر',
+        data: ticketRevenue,
+        borderColor: '#2e7dd1',
+        backgroundColor: 'rgba(46, 125, 209, 0.12)',
+      },
+      {
+        label: 'أرباح الاشتراكات',
+        data: subRevenue,
+        borderColor: '#35c759',
+        backgroundColor: 'rgba(53, 199, 89, 0.12)',
+      },
+      {
+        label: 'الإجمالي',
+        data: totalRevenue,
+        borderColor: '#0e2a47',
+        backgroundColor: 'rgba(14, 42, 71, 0.08)',
+        borderDash: [6, 4],
+      },
+    ],
+  };
+
+  if (state.charts.earnings) {
+    state.charts.earnings.data = earningsData;
+    state.charts.earnings.update();
+  } else {
+    state.charts.earnings = new window.Chart($('#earnings-chart'), {
+      type: 'line',
+      data: earningsData,
+      options: chartOptions(),
+    });
+  }
+
+  const bookingsData = {
+    labels,
+    datasets: [
+      {
+        label: 'تذاكر',
+        data: ticketCounts,
+        borderColor: '#0e2a47',
+        backgroundColor: 'rgba(14, 42, 71, 0.1)',
+      },
+      {
+        label: 'اشتراكات',
+        data: subCounts,
+        borderColor: '#f2a93b',
+        backgroundColor: 'rgba(242, 169, 59, 0.12)',
+      },
+    ],
+  };
+
+  if (state.charts.bookings) {
+    state.charts.bookings.data = bookingsData;
+    state.charts.bookings.update();
+  } else {
+    state.charts.bookings = new window.Chart($('#bookings-chart'), {
+      type: 'line',
+      data: bookingsData,
+      options: chartCountOptions(),
+    });
+  }
+
+  const label = { day: 'آخر 30 يوماً', week: 'آخر 12 أسبوعاً', month: 'آخر 12 شهراً' };
+  $('#bookings-range-label').textContent = label[state.earningsRange] || '';
+}
+
+function renderCollections(rows) {
+  const body = $('#collections-body');
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="6" class="empty">لا توجد تحصيلات بعد.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = rows
+    .map(
+      (row) => `
+      <tr>
+        <td>${escapeHtml(row.full_name || row.email || '—')}
+          <div class="muted small">${escapeHtml(row.email || '')}</div>
+        </td>
+        <td>${money(row.cash_tickets)}</td>
+        <td>${num.format(Number(row.cash_ticket_count || 0))}</td>
+        <td>${money(row.subscriptions)}</td>
+        <td>${num.format(Number(row.subscription_count || 0))}</td>
+        <td><strong>${money(row.total)}</strong></td>
+      </tr>`,
+    )
+    .join('');
 }
 
 function renderBookings(rows) {
@@ -349,9 +591,7 @@ async function openRouteDialog(route = null) {
     form.stops.value = '';
     try {
       const stops = await api.fetchRouteStops(route.id);
-      form.stops.value = stops
-        .map((stop) => `${stop.name} | ${Number(stop.price)}`)
-        .join('\n');
+      form.stops.value = formatStops(stops);
     } catch (_) {
       // Stops are optional here; an empty box keeps the current ones.
     }
@@ -363,19 +603,77 @@ async function openRouteDialog(route = null) {
   $('#route-dialog').showModal();
 }
 
-// One stop per line, `name | cumulative price from the first stop`.
+// One stop per line:
+// `name | cumulative price | governorate | location`
+// The location column accepts coordinates (`30.5,31.7`), a maps URL, or text.
 function parseStops(raw) {
   return raw
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const [nameRaw, priceRaw] = line.split('|');
-      const name = (nameRaw || '').trim();
-      const parsed = Number((priceRaw || '0').trim());
-      return { name, price: Number.isFinite(parsed) && parsed >= 0 ? parsed : 0 };
+      const parts = line.split('|').map((part) => part.trim());
+      const [nameRaw, priceRaw, govRaw, locationRaw] = parts;
+      const name = nameRaw || '';
+      const parsed = Number(priceRaw || '0');
+      const govText = (govRaw || '').toLowerCase();
+
+      let governorate = null;
+      if (govText === 'sharkia' || govText.includes('شرقية')) {
+        governorate = 'sharkia';
+      } else if (
+        govText === 'ismailia' ||
+        govText.includes('اسماعيلية') ||
+        govText.includes('إسماعيلية')
+      ) {
+        governorate = 'ismailia';
+      }
+
+      const location = locationRaw || '';
+      let latitude = null;
+      let longitude = null;
+      let mapsUrl = null;
+      let description = null;
+
+      if (location) {
+        const coordinates = location.match(
+          /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/,
+        );
+        if (coordinates) {
+          latitude = Number(coordinates[1]);
+          longitude = Number(coordinates[2]);
+        } else if (/^https?:\/\//i.test(location)) {
+          mapsUrl = location;
+        } else {
+          description = location;
+        }
+      }
+
+      return {
+        name,
+        price: Number.isFinite(parsed) && parsed >= 0 ? parsed : 0,
+        governorate,
+        latitude,
+        longitude,
+        maps_url: mapsUrl,
+        description,
+      };
     })
     .filter((stop) => stop.name);
+}
+
+function formatStops(stops) {
+  return stops
+    .map((stop) => {
+      const location =
+        stop.latitude != null && stop.longitude != null
+          ? `${stop.latitude},${stop.longitude}`
+          : stop.maps_url || stop.description || '';
+      const parts = [stop.name, Number(stop.price), stop.governorate || ''];
+      if (location) parts.push(location);
+      return parts.join(' | ');
+    })
+    .join('\n');
 }
 
 async function saveRoute(event) {
@@ -430,28 +728,109 @@ async function saveRoute(event) {
 
 // ------------------------------------------------------------- inspectors --
 
+const GOVERNORATE_LABELS = {
+  sharkia: 'الشرقية',
+  ismailia: 'الإسماعيلية',
+};
+
+function governorateLabel(value) {
+  return GOVERNORATE_LABELS[value] || '—';
+}
+
+function normalizeName(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/ؤ/g, 'و')
+    .replace(/ئ/g, 'ي')
+    .replace(/ـ/g, '')
+    .replace(/[^a-z0-9\u0600-\u06FF ]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function levenshtein(a, b) {
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j++) {
+      current[j] = Math.min(
+        previous[j] + 1,
+        current[j - 1] + 1,
+        previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+    previous = current;
+  }
+  return previous[b.length];
+}
+
+function fuzzyScore(haystack, needle) {
+  if (!needle) return 1;
+  if (haystack.includes(needle)) return 1;
+  const distance = levenshtein(haystack, needle);
+  return 1 - distance / Math.max(haystack.length, needle.length, 1);
+}
+
+function matchesDirectoryFallback(row, filters) {
+  if (filters.governorate) return false;
+  if (filters.minCompliance !== '' && filters.minCompliance != null) return false;
+  if (!filters.search) return true;
+  const haystack = normalizeName(`${row.full_name} ${row.email} ${row.phone}`);
+  return fuzzyScore(haystack, normalizeName(filters.search)) > 0.3;
+}
+
 async function loadInspectors(trigger = null) {
   const errorBox = $('#inspectors-error');
   errorBox.classList.add('hidden');
 
   return withBusy(trigger, async () => {
     try {
-      const { rows, total } = await api.fetchInspectors();
+      const filters = state.peopleFilters.inspectors;
+      const [{ rows, total }, allPeople, filteredPeople] = await Promise.all([
+        api.fetchInspectors(),
+        api.fetchPeople({ role: 'inspector' }),
+        api.fetchPeople({
+          search: filters.search,
+          governorate: filters.governorate,
+          role: 'inspector',
+          minCompliance: filters.minCompliance,
+        }),
+      ]);
       const accounts = await api.fetchAccounts(rows.map((row) => row.email));
-      state.inspectors = rows.map((row) => attachAccount(row, accounts));
+      const allByEmail = new Map(
+        allPeople.map((person) => [(person.email || '').toLowerCase(), person]),
+      );
+      const allowedIds = new Set(filteredPeople.map((person) => person.id));
+
+      state.inspectors = rows
+        .map((row) => {
+          const key = (row.email || '').toLowerCase();
+          const person = allByEmail.get(key) || null;
+          return {
+            ...row,
+            person,
+            account: accounts.find((item) => (item.email || '').toLowerCase() === key),
+          };
+        })
+        .filter((row) =>
+          row.person
+            ? allowedIds.has(row.person.id)
+            : matchesDirectoryFallback(row, filters),
+        );
+
       renderInspectors();
-      renderListNotice('inspectors', rows.length, total);
+      renderListNotice('inspectors', state.inspectors.length, total);
     } catch (error) {
       errorBox.textContent = error.message;
       errorBox.classList.remove('hidden');
     }
   });
-}
-
-function attachAccount(row, accounts) {
-  const email = (row.email || '').toLowerCase();
-  const account = accounts.find((item) => (item.email || '').toLowerCase() === email);
-  return { ...row, account };
 }
 
 function renderInspectors() {
@@ -460,12 +839,20 @@ function renderInspectors() {
 
   if (!state.inspectors.length) {
     body.innerHTML =
-      '<tr><td colspan="6" class="empty">لا يوجد مفتشون بعد. انسخ رقم المستخدم من تطبيق المفتش ثمّ رقِّه.</td></tr>';
+      '<tr><td colspan="8" class="empty">لا يوجد مفتشون بعد. انسخ رقم المستخدم من تطبيق المفتش ثمّ رقِّه.</td></tr>';
     return;
   }
 
   body.innerHTML = state.inspectors
     .map((row) => {
+      const person = row.person;
+      const name = person?.full_name || row.full_name || '—';
+      const email = person?.email || row.email || '';
+      const phone = person?.phone || row.phone || '—';
+      const compliance =
+        person?.compliance_rate == null
+          ? '—'
+          : `${Number(person.compliance_rate).toFixed(1)}%`;
       const accountLabel = row.account
         ? row.account.role === 'inspector' || row.account.role === 'admin'
           ? '<span class="badge badge-ok">مفتش مفعّل</span>'
@@ -474,9 +861,17 @@ function renderInspectors() {
 
       return `
         <tr>
-          <td><code>${escapeHtml(row.email)}</code></td>
-          <td>${escapeHtml(row.full_name || '—')}</td>
-          <td>${escapeHtml(row.phone || '—')}</td>
+          <td>${escapeHtml(name)}
+            <div class="muted small"><code>${escapeHtml(email)}</code></div>
+          </td>
+          <td>${escapeHtml(phone)}</td>
+          <td>${governorateLabel(person?.governorate)}</td>
+          <td>${compliance}</td>
+          <td>${
+            person?.id
+              ? `<button class="btn btn-mini" data-person="${person.id}" type="button">عرض</button>`
+              : '<span class="muted small">—</span>'
+          }</td>
           <td>${accountLabel}</td>
           <td>
             ${canManage
@@ -495,6 +890,64 @@ function renderInspectors() {
                  <button class="btn btn-mini btn-danger-ghost" data-delete-inspector="${row.id}" type="button">حذف</button>`
               : '<span class="muted small">—</span>'}
           </td>
+        </tr>`;
+    })
+    .join('');
+}
+
+async function openPersonBookings(personId) {
+  const person =
+    state.people.users.find((item) => item.id === personId) ||
+    state.inspectors.map((row) => row.person).find((item) => item?.id === personId);
+  if (!person) return;
+
+  $('#person-dialog-title').textContent = `آخر 5 تذاكر — ${person.full_name || person.email}`;
+  $('#person-dialog-meta').textContent =
+    `${governorateLabel(person.governorate)} · ${person.phone || 'بدون هاتف'} · ` +
+    `الامتثال: ${person.compliance_rate == null ? '—' : `${Number(person.compliance_rate).toFixed(1)}%`}`;
+  $('#person-dialog-error').classList.add('hidden');
+  $('#person-bookings-body').innerHTML =
+    '<tr><td colspan="9" class="empty">جارٍ التحميل…</td></tr>';
+  $('#person-dialog').showModal();
+
+  try {
+    const rows = await api.fetchPersonBookings(personId);
+    renderPersonBookings(rows);
+  } catch (error) {
+    $('#person-dialog-error').textContent = error.message;
+    $('#person-dialog-error').classList.remove('hidden');
+  }
+}
+
+function renderPersonBookings(rows) {
+  const body = $('#person-bookings-body');
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="9" class="empty">لا توجد تذاكر لهذا المستخدم.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = rows
+    .map((row) => {
+      const trip = row.route_code
+        ? `${escapeHtml(row.route_code)} · ${escapeHtml(row.origin || '')} ← ${escapeHtml(row.destination || '')}`
+        : '—';
+      const segment =
+        row.boarding_stop || row.alighting_stop
+          ? `${escapeHtml(row.boarding_stop || '—')} → ${escapeHtml(row.alighting_stop || '—')}`
+          : '—';
+      return `
+        <tr>
+          <td>${escapeHtml(row.travel_date || '—')}
+            <div class="muted small">${formatClock(row.move_time)}</div>
+          </td>
+          <td>${trip}</td>
+          <td>${row.seat_num ?? '—'}</td>
+          <td>${segment}</td>
+          <td>${money(row.fare)}</td>
+          <td>${paymentLabel(row.payment_method)}</td>
+          <td>${statusBadge(row.status)}</td>
+          <td class="muted small">${formatStamp(row.created_at)}</td>
+          <td>${escapeHtml(row.boarded_by || '—')}</td>
         </tr>`;
     })
     .join('');
@@ -641,10 +1094,11 @@ async function loadUsers(trigger = null) {
 
   return withBusy(trigger, async () => {
     try {
-      const { rows, total } = await api.fetchUsers();
-      state.users = rows;
+      const filters = state.peopleFilters.users;
+      const rows = await api.fetchPeople(filters);
+      state.people.users = rows;
       renderUsers();
-      renderListNotice('users', rows.length, total);
+      renderListNotice('users', rows.length, null);
     } catch (error) {
       errorBox.textContent = error.message;
       errorBox.classList.remove('hidden');
@@ -656,20 +1110,33 @@ function renderUsers() {
   const body = $('#users-body');
   const me = state.session?.id;
   const canEdit = Boolean(state.session?.canEditUsers);
+  const canAssignAdmin = Boolean(state.session?.canAssignAdmin);
+  const roleOptions = canAssignAdmin
+    ? api.ASSIGNABLE_ROLES
+    : api.ADMIN_ROLE_OPTIONS;
 
-  if (!state.users.length) {
-    body.innerHTML = '<tr><td colspan="5" class="empty">لا يوجد مستخدمون بعد.</td></tr>';
+  if (!state.people.users.length) {
+    body.innerHTML = '<tr><td colspan="7" class="empty">لا يوجد مستخدمون مطابقون.</td></tr>';
     return;
   }
 
-  body.innerHTML = state.users
+  body.innerHTML = state.people.users
     .map((user) => {
       const isSelf = user.id === me;
-      const editable = canEdit && !isSelf;
+      const targetIsAdmin = user.role === 'admin' || user.role === 'super_admin';
+      const editable =
+        canEdit &&
+        !isSelf &&
+        user.role !== 'super_admin' &&
+        (canAssignAdmin || !targetIsAdmin);
       const roleLabel = api.ROLE_LABELS[user.role] || user.role;
+      const compliance =
+        user.compliance_rate == null
+          ? '—'
+          : `${Number(user.compliance_rate).toFixed(1)}%`;
 
       const roleCell = editable
-        ? `<select class="role-select" data-role-user="${user.id}">${api.ASSIGNABLE_ROLES.map(
+        ? `<select class="role-select" data-role-user="${user.id}">${roleOptions.map(
             (role) =>
               `<option value="${role}" ${role === user.role ? 'selected' : ''}>${api.ROLE_LABELS[role] || role}</option>`,
           ).join('')}</select>`
@@ -677,9 +1144,13 @@ function renderUsers() {
 
       return `
         <tr>
-          <td>${escapeHtml(user.full_name || '—')}</td>
-          <td><code>${escapeHtml(user.email || '—')}</code></td>
+          <td>${escapeHtml(user.full_name || '—')}
+            <div class="muted small"><code>${escapeHtml(user.email || '')}</code></div>
+          </td>
           <td>${escapeHtml(user.phone || '—')}</td>
+          <td>${governorateLabel(user.governorate)}</td>
+          <td>${compliance}</td>
+          <td><button class="btn btn-mini" data-person="${user.id}" type="button">عرض</button></td>
           <td>${roleCell}</td>
           <td class="row-actions">
             ${editable
@@ -709,6 +1180,284 @@ async function saveUserRole(userId) {
   } finally {
     if (button) button.disabled = false;
   }
+}
+
+// ---------------------------------------------------------- subscriptions --
+
+const SUB_STATUS_LABELS = {
+  pending: 'بانتظار التحصيل',
+  active: 'نشط',
+  expired: 'منتهي',
+  cancelled: 'ملغي',
+};
+
+function subscriptionStatusClass(status) {
+  return {
+    pending: 'badge-warn',
+    active: 'badge-ok',
+    expired: 'badge-off',
+    cancelled: 'badge-off',
+  }[status] || 'badge-off';
+}
+
+async function loadSubscriptions(trigger = null) {
+  const errorBox = $('#subscriptions-error');
+  errorBox.classList.add('hidden');
+
+  return withBusy(trigger, async () => {
+    try {
+      const filters = state.subscriptionFilters;
+      const [requests, plans] = await Promise.all([
+        api.fetchSubscriptions(filters),
+        api.fetchSubscriptionPlans(),
+      ]);
+      state.subscriptions = requests;
+      state.subscriptionPlans = plans;
+      renderSubscriptions();
+      renderPlans();
+    } catch (error) {
+      errorBox.textContent = error.message;
+      errorBox.classList.remove('hidden');
+    }
+  });
+}
+
+function renderSubscriptions() {
+  const body = $('#subscriptions-body');
+  if (!state.subscriptions.length) {
+    body.innerHTML = '<tr><td colspan="9" class="empty">لا توجد اشتراكات مطابقة.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = state.subscriptions
+    .map((row) => {
+      const pending = row.status === 'pending' && !row.paid;
+      return `
+        <tr>
+          <td>${escapeHtml(row.full_name || '—')}
+            <div class="muted small">${escapeHtml(row.email || '')}</div>
+          </td>
+          <td>${governorateLabel(row.governorate)}</td>
+          <td>${escapeHtml(row.plan_name || '—')}
+            <div class="muted small">${row.duration_days ?? '—'} يوم</div>
+          </td>
+          <td>${money(row.amount)}</td>
+          <td><span class="badge ${subscriptionStatusClass(row.status)}">${
+            SUB_STATUS_LABELS[row.status] || escapeHtml(row.status)
+          }</span></td>
+          <td>${
+            row.paid
+              ? '<span class="badge badge-ok">مدفوع</span>'
+              : '<span class="badge badge-warn">غير مدفوع</span>'
+          }</td>
+          <td class="muted small">${formatStamp(row.created_at)}</td>
+          <td>${escapeHtml(row.collected_by_name || '—')}</td>
+          <td class="row-actions">
+            ${
+              pending
+                ? `<button class="btn btn-mini" data-collect-subscription="${row.id}" type="button">تحصيل</button>`
+                : '<span class="muted small">—</span>'
+            }
+          </td>
+        </tr>`;
+    })
+    .join('');
+}
+
+function renderPlans() {
+  const body = $('#plans-body');
+  if (!state.subscriptionPlans.length) {
+    body.innerHTML = '<tr><td colspan="5" class="empty">لا توجد خطط.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = state.subscriptionPlans
+    .map(
+      (plan) => `
+      <tr>
+        <td>${escapeHtml(plan.name_ar || plan.code)}</td>
+        <td>${plan.duration_days} يوم</td>
+        <td>${money(plan.price)}</td>
+        <td>${
+          plan.is_active
+            ? '<span class="badge badge-ok">مفعّلة</span>'
+            : '<span class="badge badge-off">موقوفة</span>'
+        }</td>
+        <td class="row-actions">
+          <button class="btn btn-mini" data-edit-plan="${plan.id}" type="button">تعديل</button>
+        </td>
+      </tr>`,
+    )
+    .join('');
+}
+
+function openPlanDialog(plan) {
+  const form = $('#plan-form');
+  form.reset();
+  setFormError('plan', null);
+  state.planEditingId = plan.id;
+  $('#plan-dialog-title').textContent = `تعديل خطة ${plan.name_ar || plan.code}`;
+  form.plan_id.value = plan.id;
+  form.price.value = plan.price;
+  form.duration_days.value = plan.duration_days;
+  form.is_active.checked = Boolean(plan.is_active);
+  $('#plan-dialog').showModal();
+}
+
+async function savePlan(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = $('#btn-save-plan');
+  setFormError('plan', null);
+  button.disabled = true;
+
+  try {
+    await api.saveSubscriptionPlan({
+      id: Number(form.plan_id.value),
+      price: Number(form.price.value),
+      duration_days: Number(form.duration_days.value),
+      is_active: form.is_active.checked,
+    });
+    toast('تم حفظ الخطة.');
+    $('#plan-dialog').close();
+    await loadSubscriptions();
+  } catch (error) {
+    setFormError('plan', error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function collectSubscriptionRow(id) {
+  if (!window.confirm('تأكيد تحصيل قيمة هذا الاشتراك نقداً؟')) return;
+  try {
+    await api.collectSubscription(id);
+    toast('تم تسجيل التحصيل وتفعيل الاشتراك.');
+    await loadSubscriptions();
+    if (currentView() === 'overview') await loadOverview();
+  } catch (error) {
+    $('#subscriptions-error').textContent = error.message;
+    $('#subscriptions-error').classList.remove('hidden');
+  }
+}
+
+// -------------------------------------------------------- notifications --
+
+function renderNotifications() {
+  const list = $('#notif-list');
+  const badge = $('#notif-badge');
+  const rows = state.notifications;
+  const lastSeen = state.notifLastSeen ? new Date(state.notifLastSeen) : null;
+  const unread = lastSeen
+    ? rows.filter((row) => new Date(row.created_at) > lastSeen)
+    : [];
+
+  badge.textContent = unread.length > 99 ? '99+' : String(unread.length);
+  badge.classList.toggle('hidden', unread.length === 0);
+
+  if (!rows.length) {
+    list.innerHTML = '<p class="empty">لا توجد إشعارات.</p>';
+    return;
+  }
+
+  list.innerHTML = rows
+    .map((row) => {
+      const isUnread = lastSeen && new Date(row.created_at) > lastSeen;
+      const user = row.users || {};
+      const category =
+        row.category === 'suggestion'
+          ? 'اقتراح'
+          : row.category === 'issue'
+            ? 'مشكلة'
+            : 'أخرى';
+      return `
+        <button class="notif-item ${isUnread ? 'is-unread' : ''}"
+                data-notif-id="${row.id}" type="button">
+          <span><strong>${escapeHtml(row.reference || '')}</strong> · ${category}</span>
+          <span>${escapeHtml(user.full_name || user.email || 'مستخدم')} — ${escapeHtml(
+            (row.message || '').slice(0, 90),
+          )}</span>
+          <span class="notif-meta">${formatStamp(row.created_at)}</span>
+        </button>`;
+    })
+    .join('');
+}
+
+async function loadNotifications() {
+  try {
+    const rows = await api.fetchFeedbackNotifications(20);
+    const previous = state.notifLastSeen;
+    state.notifications = rows;
+
+    if (!previous) {
+      state.notifLastSeen = rows[0]?.created_at || new Date().toISOString();
+      localStorage.setItem('busna.notifLastSeen', state.notifLastSeen);
+    } else {
+      const fresh = rows.filter((row) => new Date(row.created_at) > new Date(previous));
+      if (fresh.length) notifyBrowser(fresh);
+    }
+
+    renderNotifications();
+  } catch (_) {
+    // The bell is best-effort; the support inbox still works without it.
+  }
+}
+
+function notifyBrowser(rows) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const latest = rows[0];
+  const user = latest.users || {};
+  try {
+    const note = new Notification('طلب دعم جديد', {
+      body: `${user.full_name || 'مستخدم'}: ${latest.message || ''}`.slice(0, 120),
+      icon: 'favicon.png',
+      tag: latest.id,
+    });
+    note.onclick = () => {
+      window.focus();
+      openNotification(latest.id);
+    };
+  } catch (_) {
+    // Some browsers block constructors in insecure contexts.
+  }
+}
+
+async function enableBrowserNotifications() {
+  if (!('Notification' in window)) {
+    toast('هذا المتصفح لا يدعم الإشعارات.');
+    return;
+  }
+  const permission = await Notification.requestPermission();
+  toast(
+    permission === 'granted'
+      ? 'تم تفعيل إشعارات المتصفح.'
+      : 'لم يتم السماح بإشعارات المتصفح.',
+  );
+}
+
+function markNotificationsSeen() {
+  state.notifLastSeen = new Date().toISOString();
+  localStorage.setItem('busna.notifLastSeen', state.notifLastSeen);
+  renderNotifications();
+}
+
+async function openNotification(id) {
+  const row = state.notifications.find((item) => item.id === id);
+  if (!row) return;
+
+  markNotificationsSeen();
+  $('#notif-panel').classList.add('hidden');
+  window.location.hash = 'feedback';
+
+  state.supportTab = row.category === 'suggestion' ? 'suggestion' : 'support';
+  $$('#support-tabs .segment').forEach((item) =>
+    item.classList.toggle('is-active', item.dataset.tab === state.supportTab),
+  );
+  $('#support-panel').classList.toggle('hidden', state.supportTab !== 'support');
+  $('#suggestions-panel').classList.toggle('hidden', state.supportTab !== 'suggestion');
+
+  await loadSupport();
+  if (row.category !== 'suggestion') openSupportThread(row.id);
 }
 
 // -------------------------------------------------------- support requests --
@@ -1147,6 +1896,9 @@ function formatStamp(value) {
 }
 
 function paymentLabel(method) {
+  if (method === 'subscription') {
+    return '<span class="badge badge-ok">اشتراك</span>';
+  }
   return method === 'app'
     ? '<span class="badge badge-info">تطبيق</span>'
     : '<span class="badge badge-warn">كاش</span>';
@@ -1383,6 +2135,174 @@ function bindStatic() {
   $('#users-body').addEventListener('click', (event) => {
     const save = event.target.closest('[data-save-role]');
     if (save) saveUserRole(save.dataset.saveRole);
+    const person = event.target.closest('[data-person]');
+    if (person) openPersonBookings(person.dataset.person);
+  });
+
+  $('#inspectors-body').addEventListener('click', (event) => {
+    const person = event.target.closest('[data-person]');
+    if (person) openPersonBookings(person.dataset.person);
+  });
+
+  // ------------------------------------------------------------ people filters
+  const debounce = (fn, ms = 260) => {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), ms);
+    };
+  };
+
+  const readUserFilters = () => {
+    state.peopleFilters.users = {
+      search: $('#users-search').value.trim(),
+      governorate: $('#users-governorate').value,
+      role: $('#users-role').value,
+      minCompliance: $('#users-compliance').value,
+    };
+  };
+  const readInspectorFilters = () => {
+    state.peopleFilters.inspectors = {
+      search: $('#inspectors-search').value.trim(),
+      governorate: $('#inspectors-governorate').value,
+      minCompliance: $('#inspectors-compliance').value,
+    };
+  };
+
+  const reloadUsers = debounce(() => loadUsers());
+  const reloadInspectors = debounce(() => loadInspectors());
+
+  $('#users-search').addEventListener('input', () => {
+    readUserFilters();
+    reloadUsers();
+  });
+  $('#users-governorate').addEventListener('change', () => {
+    readUserFilters();
+    loadUsers();
+  });
+  $('#users-role').addEventListener('change', () => {
+    readUserFilters();
+    loadUsers();
+  });
+  $('#users-compliance').addEventListener('input', () => {
+    readUserFilters();
+    reloadUsers();
+  });
+  $('#btn-apply-users').addEventListener('click', () => {
+    readUserFilters();
+    loadUsers();
+  });
+
+  $('#inspectors-search').addEventListener('input', () => {
+    readInspectorFilters();
+    reloadInspectors();
+  });
+  $('#inspectors-governorate').addEventListener('change', () => {
+    readInspectorFilters();
+    loadInspectors();
+  });
+  $('#inspectors-compliance').addEventListener('input', () => {
+    readInspectorFilters();
+    reloadInspectors();
+  });
+  $('#btn-apply-inspectors').addEventListener('click', () => {
+    readInspectorFilters();
+    loadInspectors();
+  });
+
+  // ----------------------------------------------------------- subscriptions
+  $('#btn-refresh-subscriptions').addEventListener('click', (event) =>
+    loadSubscriptions(event.currentTarget),
+  );
+
+  $$('#subscription-tabs .segment').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.subscriptionTab = button.dataset.tab;
+      $$('#subscription-tabs .segment').forEach((item) =>
+        item.classList.toggle('is-active', item === button),
+      );
+      $('#subscription-requests-panel').classList.toggle(
+        'hidden',
+        state.subscriptionTab !== 'requests',
+      );
+      $('#subscription-plans-panel').classList.toggle(
+        'hidden',
+        state.subscriptionTab !== 'plans',
+      );
+    });
+  });
+
+  const readSubscriptionFilters = () => {
+    state.subscriptionFilters = {
+      status: $('#subscriptions-status').value,
+      governorate: $('#subscriptions-governorate').value,
+    };
+  };
+  $('#subscriptions-status').addEventListener('change', () => {
+    readSubscriptionFilters();
+    loadSubscriptions();
+  });
+  $('#subscriptions-governorate').addEventListener('change', () => {
+    readSubscriptionFilters();
+    loadSubscriptions();
+  });
+  $('#btn-apply-subscriptions').addEventListener('click', () => {
+    readSubscriptionFilters();
+    loadSubscriptions();
+  });
+  $('#subscriptions-body').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-collect-subscription]');
+    if (button) collectSubscriptionRow(button.dataset.collectSubscription);
+  });
+  $('#plans-body').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-edit-plan]');
+    if (!button) return;
+    const plan = state.subscriptionPlans.find(
+      (item) => String(item.id) === button.dataset.editPlan,
+    );
+    if (plan) openPlanDialog(plan);
+  });
+  $('#plan-form').addEventListener('submit', savePlan);
+
+  // --------------------------------------------------------------- charts
+  $$('#earnings-range .segment').forEach((button) => {
+    button.addEventListener('click', async () => {
+      state.earningsRange = button.dataset.range;
+      $$('#earnings-range .segment').forEach((item) =>
+        item.classList.toggle('is-active', item === button),
+      );
+      try {
+        const rows = await api.fetchEarnings(state.earningsRange);
+        renderCharts(rows);
+      } catch (error) {
+        toast(error.message);
+      }
+    });
+  });
+
+  // --------------------------------------------------------- notifications
+  $('#btn-notifications').addEventListener('click', (event) => {
+    event.stopPropagation();
+    const panel = $('#notif-panel');
+    const willOpen = panel.classList.contains('hidden');
+    panel.classList.toggle('hidden', !willOpen);
+    if (willOpen) {
+      markNotificationsSeen();
+      loadNotifications();
+    }
+  });
+  $('#btn-enable-notifications').addEventListener('click', (event) => {
+    event.stopPropagation();
+    enableBrowserNotifications();
+  });
+  $('#notif-list').addEventListener('click', (event) => {
+    const item = event.target.closest('[data-notif-id]');
+    if (item) openNotification(item.dataset.notifId);
+  });
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.notif-wrap')) {
+      $('#notif-panel').classList.add('hidden');
+    }
   });
 }
 
