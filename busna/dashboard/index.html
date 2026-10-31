@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>باصنا | لوحة التحكم</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="stylesheet" href="css/app.css?v=20261101c">
+  <link rel="stylesheet" href="css/app.css?v=20261101d">
 </head>
 <body>
 
@@ -648,14 +648,15 @@
           <input name="move_time" type="time" required>
         </label>
         <label class="field">
-          <span>عدد المقاعد</span>
-          <input name="seats" type="number" min="1" max="60" step="1" required>
+          <span>سعة المقاعد</span>
+          <select name="seats" id="route-seats" required></select>
         </label>
         <label class="field">
           <span>نوع المركبة</span>
           <select name="vehicle_type">
             <option value="bus">باص</option>
             <option value="microbus">ميكروباص</option>
+            <option value="minibus">ميني باص</option>
           </select>
         </label>
       </div>
@@ -867,6 +868,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="js/vendor/chart.umd.min.js?v=20261031b"></script>
-  <script type="module" src="js/app.js?v=20261101c"></script>
+  <script type="module" src="js/app.js?v=20261101d"></script>
 </body>
 </html>

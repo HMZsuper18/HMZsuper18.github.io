@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261101c';
+import * as api from './api.js?v=20261101d';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -573,8 +573,55 @@ async function loadRoutes(trigger = null) {
   });
 }
 
+const SEAT_PRESETS = {
+  bus: [
+    { seats: 14, label: '14 مقعد' },
+    { seats: 20, label: '20 مقعد' },
+    { seats: 22, label: '22 مقعد' },
+    { seats: 30, label: '30 مقعد' },
+    { seats: 50, label: '50 مقعد' },
+  ],
+  microbus: [
+    { seats: 12, label: '12 مقعد — 2 + 3 + 3 + 4' },
+    { seats: 14, label: '14 مقعد — 2 + 3 + 3 + 3 + 3' },
+    { seats: 15, label: '15 مقعد — 2 + 3 + 3 + 3 + 4' },
+  ],
+  minibus: [
+    { seats: 14, label: '14 مقعد — 2 + 4 + 4 + 4' },
+    { seats: 17, label: '17 مقعد — 2 + 4 + 4 + 4 + 3' },
+    { seats: 22, label: '22 مقعد — 2 + 4×5' },
+    { seats: 26, label: '26 مقعد — 2 + 4×6' },
+  ],
+};
+
 function vehicleLabel(value) {
-  return value === 'microbus' ? 'ميكروباص' : 'باص';
+  if (value === 'microbus') return 'ميكروباص';
+  if (value === 'minibus') return 'ميني باص';
+  return 'باص';
+}
+
+function populateSeatOptions(vehicle, preferred = null) {
+  const select = $('#route-seats');
+  if (!select) return;
+  const presets = SEAT_PRESETS[vehicle] || SEAT_PRESETS.bus;
+  const current = Number(preferred);
+  const options = presets.slice();
+  if (
+    Number.isInteger(current) &&
+    current > 0 &&
+    !options.some((option) => option.seats === current)
+  ) {
+    options.push({ seats: current, label: `${current} مقعد — الحالي` });
+  }
+  options.sort((a, b) => a.seats - b.seats);
+  select.innerHTML = options
+    .map((option) => `<option value="${option.seats}">${option.label}</option>`)
+    .join('');
+  select.value = String(
+    options.some((option) => option.seats === current)
+      ? current
+      : presets[0].seats,
+  );
 }
 
 function renderRoutes() {
@@ -873,6 +920,45 @@ function buildSeatRows(vehicle, total) {
     return rows;
   }
 
+  if (vehicle === 'minibus') {
+    const front = total >= 2 ? 2 : total;
+    if (front > 0) {
+      rows.push(
+        Array.from({ length: front }, () => ({
+          seat: seat++,
+          kind: 'window',
+        })),
+      );
+    }
+    let remaining = total - front;
+    while (remaining > 0) {
+      if (remaining <= 5) {
+        rows.push(
+          Array.from({ length: remaining }, (_, index) => {
+            let kind = 'middle';
+            if (remaining <= 1) kind = 'window';
+            else if (index === 0 || index === remaining - 1) kind = 'window';
+            else if (remaining === 5 && (index === 1 || index === remaining - 2)) {
+              kind = 'aisle';
+            }
+            return { seat: seat++, kind };
+          }),
+        );
+        remaining = 0;
+      } else {
+        rows.push([
+          { seat: seat++, kind: 'window' },
+          { seat: seat++, kind: 'aisle' },
+          { gap: true },
+          { seat: seat++, kind: 'aisle' },
+          { seat: seat++, kind: 'window' },
+        ]);
+        remaining -= 4;
+      }
+    }
+    return rows;
+  }
+
   const backRow = total >= 5 ? 5 : 0;
   let remaining = total - backRow;
   while (remaining > 0) {
@@ -917,7 +1003,7 @@ function updateSeatPreview() {
   const seatRows = rows
     .map((row, rowIndex) => {
       const driver =
-        vehicle === 'microbus' && rowIndex === 0
+        vehicle !== 'bus' && rowIndex === 0
           ? '<span class="seat-driver-inline" title="السائق"><img src="assets/steering-wheel.svg" alt=""></span>'
           : '';
       return `
@@ -934,7 +1020,7 @@ function updateSeatPreview() {
     })
     .join('');
   const driver =
-    vehicle === 'microbus'
+    vehicle !== 'bus'
       ? ''
       : `<div class="seat-driver">
           <img src="assets/steering-wheel.svg" alt="">
@@ -976,8 +1062,8 @@ async function openRouteDialog(route = null) {
   if (route) {
     form.code.value = route.code;
     form.move_time.value = formatTime(route.move_time);
-    form.seats.value = route.seats;
     form.vehicle_type.value = route.vehicle_type || 'bus';
+    populateSeatOptions(form.vehicle_type.value, route.seats);
     form.is_active.checked = Boolean(route.is_active);
     try {
       stops = await api.fetchRouteStops(route.id);
@@ -987,7 +1073,7 @@ async function openRouteDialog(route = null) {
   } else {
     form.is_active.checked = true;
     form.vehicle_type.value = 'bus';
-    form.seats.value = 14;
+    populateSeatOptions('bus', 14);
   }
 
   renderRouteGraph(stops);
@@ -2559,15 +2645,11 @@ function bindStatic() {
   $('#trip-end').addEventListener('change', updateTripCostPreview);
   $('#route-form').vehicle_type.addEventListener('change', () => {
     const form = $('#route-form');
-    const seats = Number(form.seats.value);
-    if (form.vehicle_type.value === 'microbus' && seats === 14) {
-      form.seats.value = 12;
-    } else if (form.vehicle_type.value === 'bus' && seats === 12) {
-      form.seats.value = 14;
-    }
+    populateSeatOptions(form.vehicle_type.value);
     updateSeatPreview();
   });
   $('#route-form').seats.addEventListener('input', updateSeatPreview);
+  $('#route-form').seats.addEventListener('change', updateSeatPreview);
   $('#btn-apply-stations').addEventListener('click', () => {
     state.stationFilters = {
       search: $('#stations-search').value,
