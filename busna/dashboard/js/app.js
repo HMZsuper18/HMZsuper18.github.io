@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261101d';
+import * as api from './api.js?v=20261101e';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -575,11 +575,16 @@ async function loadRoutes(trigger = null) {
 
 const SEAT_PRESETS = {
   bus: [
-    { seats: 14, label: '14 مقعد' },
-    { seats: 20, label: '20 مقعد' },
-    { seats: 22, label: '22 مقعد' },
-    { seats: 30, label: '30 مقعد' },
-    { seats: 50, label: '50 مقعد' },
+    { seats: 17, label: '17 مقعد — 4×3 + 5' },
+    { seats: 21, label: '21 مقعد — 4×4 + 5' },
+    { seats: 25, label: '25 مقعد — 4×5 + 5' },
+    { seats: 29, label: '29 مقعد — 4×6 + 5' },
+    { seats: 33, label: '33 مقعد — 4×7 + 5' },
+    { seats: 37, label: '37 مقعد — 4×8 + 5' },
+    { seats: 41, label: '41 مقعد — 4×9 + 5' },
+    { seats: 45, label: '45 مقعد — 4×10 + 5' },
+    { seats: 49, label: '49 مقعد — 4×11 + 5' },
+    { seats: 53, label: '53 مقعد — 4×12 + 5' },
   ],
   microbus: [
     { seats: 12, label: '12 مقعد — 2 + 3 + 3 + 4' },
@@ -959,7 +964,8 @@ function buildSeatRows(vehicle, total) {
     return rows;
   }
 
-  const backRow = total >= 5 ? 5 : 0;
+  const remainder = total % 4;
+  const backRow = total < 5 ? total : remainder === 1 ? 5 : remainder;
   let remaining = total - backRow;
   while (remaining > 0) {
     const count = Math.min(4, remaining);
@@ -982,15 +988,21 @@ function buildSeatRows(vehicle, total) {
     remaining -= count;
   }
   if (backRow > 0) {
-    rows.push([
-      { seat: seat++, kind: 'window' },
-      { seat: seat++, kind: 'aisle' },
-      { seat: seat++, kind: 'middle' },
-      { seat: seat++, kind: 'aisle' },
-      { seat: seat++, kind: 'window' },
-    ]);
+    rows.push(
+      Array.from({ length: backRow }, (_, index) => ({
+        seat: seat++,
+        kind: benchSeatKind(index, backRow),
+      })),
+    );
   }
   return rows;
+}
+
+function benchSeatKind(index, count) {
+  if (count <= 2) return 'window';
+  if (index === 0 || index === count - 1) return 'window';
+  if (count === 5 && (index === 1 || index === count - 2)) return 'aisle';
+  return 'middle';
 }
 
 function updateSeatPreview() {
