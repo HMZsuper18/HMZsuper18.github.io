@@ -1315,56 +1315,194 @@ tr.is-unread td {
   margin-bottom: 8px;
 }
 
-.node-editor {
+.route-graph-wrap {
+  overflow-x: auto;
+  padding: 20px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background-color: var(--cream);
+  background-image: radial-gradient(rgba(14, 42, 71, 0.13) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.route-graph {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.node-row {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) 92px auto;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--cream);
+  min-width: max-content;
+  padding: 4px;
 }
 
-.node-index {
+.graph-node {
+  flex: 0 0 210px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(16, 35, 58, 0.1);
+}
+
+.graph-node-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: linear-gradient(135deg, var(--navy), var(--navy-light));
+  color: var(--on-navy);
+}
+
+.graph-node-index {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 26px;
   height: 26px;
-  border-radius: 50%;
-  background: var(--navy);
-  color: var(--on-navy);
+  border-radius: 8px;
+  background: rgba(247, 243, 232, 0.16);
   font-size: 0.78rem;
   font-weight: 800;
 }
 
-.node-row select,
-.node-row input {
+.graph-node-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.graph-node-actions .btn {
+  min-width: 28px;
+  padding: 3px 7px;
+  background: rgba(247, 243, 232, 0.12);
+  border-color: rgba(247, 243, 232, 0.25);
+  color: var(--on-navy);
+}
+
+.graph-node-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.node-station {
+  width: 100%;
   min-width: 0;
   font: inherit;
-  font-weight: 500;
-  padding: 8px 10px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 9px 10px;
   border: 1px solid var(--border);
   border-radius: 9px;
   background: #fff;
   color: var(--text);
 }
 
-.node-actions {
+.graph-edge {
+  flex: 0 0 150px;
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 4px;
 }
 
-.node-actions .btn {
-  min-width: 30px;
-  padding: 4px 7px;
+.graph-edge-line {
+  flex: 1;
+  height: 2px;
+  min-width: 14px;
+  background: var(--navy-light);
+  border-radius: 2px;
+  position: relative;
+}
+
+.graph-edge-line:last-child::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -1px;
+  width: 9px;
+  height: 9px;
+  border-top: 2px solid var(--navy-light);
+  border-left: 2px solid var(--navy-light);
+  transform: rotate(-45deg);
+}
+
+.graph-edge-price {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 3px 8px rgba(16, 35, 58, 0.08);
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.edge-price {
+  width: 74px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--navy);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.edge-price:focus {
+  outline: 2px solid rgba(46, 125, 209, 0.4);
+  border-color: var(--accent);
+}
+
+.trip-cost {
+  margin-top: 12px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.trip-cost-controls {
+  display: flex;
+  flex: 1;
+  gap: 10px;
+  min-width: 260px;
+}
+
+.trip-cost-controls .field {
+  flex: 1;
+  min-width: 120px;
+}
+
+.trip-cost-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.trip-cost-total span {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.trip-cost-total strong {
+  font-size: 1.25rem;
+  color: var(--navy);
 }
 
 /* --------------------------------------------------------- seat preview */
@@ -1473,11 +1611,14 @@ tr.is-unread td {
 }
 
 @media (max-width: 600px) {
-  .node-row {
-    grid-template-columns: 24px minmax(0, 1fr);
+  .graph-node {
+    flex-basis: 178px;
   }
-  .node-row .stop-price,
-  .node-actions {
-    grid-column: 2;
+  .graph-edge {
+    flex-basis: 120px;
+  }
+  .trip-cost-controls {
+    flex-direction: column;
+    min-width: 0;
   }
 }

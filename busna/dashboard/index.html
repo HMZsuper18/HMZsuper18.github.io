@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>باصنا | لوحة التحكم</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="stylesheet" href="css/app.css?v=20261101a">
+  <link rel="stylesheet" href="css/app.css?v=20261101b">
 </head>
 <body>
 
@@ -664,11 +664,29 @@
           <span>محطات المسار بالترتيب</span>
           <button id="btn-add-stop" class="btn btn-mini" type="button">+ إضافة محطة</button>
         </div>
-        <div id="route-stops-editor" class="node-editor"></div>
+        <div class="route-graph-wrap">
+          <div id="route-graph" class="route-graph" aria-label="محرر عقد المسار"></div>
+        </div>
         <span class="hint muted">
-          اختر المحطات من الدليل ورتّبها بالأسهم. السعر تراكمي من أول محطة.
-          أضف محطتين على الأقل.
+          كل عقدة هي محطة، وكل وصلة بين عقدتين لها سعر المقطع. رتّب العقد
+          بالأسهم، وأضف محطتين على الأقل.
         </span>
+        <div class="trip-cost">
+          <div class="trip-cost-controls">
+            <label class="field">
+              <span>من محطة</span>
+              <select id="trip-start"></select>
+            </label>
+            <label class="field">
+              <span>إلى محطة</span>
+              <select id="trip-end"></select>
+            </label>
+          </div>
+          <div class="trip-cost-total">
+            <span id="trip-cost-range">إجمالي الرحلة</span>
+            <strong id="trip-cost-value">0 ج.م</strong>
+          </div>
+        </div>
       </div>
       <div class="field field-full">
         <span>معاينة تخطيط المقاعد</span>
@@ -849,6 +867,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="js/vendor/chart.umd.min.js?v=20261031b"></script>
-  <script type="module" src="js/app.js?v=20261101a"></script>
+  <script type="module" src="js/app.js?v=20261101b"></script>
 </body>
 </html>

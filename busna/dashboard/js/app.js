@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261101a';
+import * as api from './api.js?v=20261101b';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -636,77 +636,212 @@ function stationOptions(selectedId) {
   ].join('');
 }
 
-function stopRowHtml(stop = {}, index = 0) {
-  const stationId = stop.station_id ?? '';
-  const price = Number.isFinite(Number(stop.price)) ? Number(stop.price) : 0;
+function graphNodeHtml(node, index) {
   return `
-    <div class="node-row" data-stop-row>
-      <span class="node-index">${index + 1}</span>
-      <select class="stop-station" aria-label="المحطة">${stationOptions(stationId)}</select>
-      <input class="stop-price" type="number" min="0" step="1" value="${price}"
-             aria-label="السعر التراكمي" placeholder="السعر">
-      <div class="node-actions">
-        <button type="button" class="btn btn-mini" data-move-stop="-1" title="أعلى">↑</button>
-        <button type="button" class="btn btn-mini" data-move-stop="1" title="أسفل">↓</button>
-        <button type="button" class="btn btn-mini btn-danger-ghost" data-remove-stop title="حذف">×</button>
+    <div class="graph-node" data-graph-node>
+      <div class="graph-node-head">
+        <span class="graph-node-index">${index + 1}</span>
+        <div class="graph-node-actions">
+          <button type="button" class="btn btn-mini" data-move-node="-1" title="إلى اليمين">→</button>
+          <button type="button" class="btn btn-mini" data-move-node="1" title="إلى اليسار">←</button>
+          <button type="button" class="btn btn-mini btn-danger-ghost" data-remove-node title="حذف المحطة">×</button>
+        </div>
       </div>
+      <label class="graph-node-field">
+        <span>المحطة</span>
+        <select class="node-station" aria-label="المحطة">${stationOptions(node.stationId ?? '')}</select>
+      </label>
     </div>`;
 }
 
-function renumberStopRows() {
-  $$('#route-stops-editor [data-stop-row]').forEach((row, index) => {
-    row.querySelector('.node-index').textContent = String(index + 1);
+function graphEdgeHtml(price, index) {
+  return `
+    <div class="graph-edge" data-graph-edge>
+      <span class="graph-edge-line"></span>
+      <label class="graph-edge-price">
+        <span>سعر الوصلة ${index + 1}</span>
+        <input class="edge-price" type="number" min="0" step="1"
+               value="${Number(price) || 0}" inputmode="numeric"
+               aria-label="سعر الوصلة ${index + 1}">
+      </label>
+      <span class="graph-edge-line"></span>
+    </div>`;
+}
+
+function readGraph() {
+  const graph = $('#route-graph');
+  if (!graph) return { nodes: [], edges: [] };
+  const nodes = $$('[data-graph-node]', graph).map((node) => ({
+    stationId: node.querySelector('.node-station')?.value || '',
+  }));
+  const edges = $$('[data-graph-edge]', graph).map(
+    (edge) => Number(edge.querySelector('.edge-price')?.value) || 0,
+  );
+  return { nodes, edges };
+}
+
+function writeGraph(data) {
+  const graph = $('#route-graph');
+  if (!graph) return;
+
+  const nodes = data.nodes.length ? data.nodes : [{ stationId: '' }];
+  const edges = data.edges.slice(0, Math.max(0, nodes.length - 1));
+  while (edges.length < nodes.length - 1) edges.push(0);
+
+  graph.innerHTML = nodes
+    .map((node, index) => {
+      const edge = index === 0 ? '' : graphEdgeHtml(edges[index - 1], index - 1);
+      return edge + graphNodeHtml(node, index);
+    })
+    .join('');
+
+  refreshTripSelectors();
+  updateTripCostPreview();
+  updateSeatPreview();
+}
+
+function resolveStationId(stop) {
+  if (stop.station_id) return stop.station_id;
+  return (
+    state.stations.find(
+      (station) =>
+        station.name.trim() === String(stop.name || '').trim() &&
+        (!stop.governorate || station.governorate === stop.governorate),
+    )?.id ?? ''
+  );
+}
+
+function renderRouteGraph(stops) {
+  const nodes = stops.map((stop) => ({ stationId: resolveStationId(stop) }));
+  const edges = stops.slice(1).map((stop, index) => {
+    const previous = Number(stops[index].price) || 0;
+    const current = Number(stop.price) || 0;
+    return Math.max(0, current - previous);
   });
+  writeGraph({ nodes: nodes.length ? nodes : [{ stationId: '' }], edges });
 }
 
-function renderStopEditor(stops) {
-  const editor = $('#route-stops-editor');
-  editor.innerHTML = stops.length
-    ? stops.map((stop, index) => stopRowHtml(stop, index)).join('')
-    : stopRowHtml({}, 0);
-  renumberStopRows();
-  updateSeatPreview();
+function addRouteNode() {
+  const data = readGraph();
+  const nodes = data.nodes.length ? data.nodes : [{ stationId: '' }];
+  const edges = data.edges.slice();
+  if (nodes.length > 0) edges.push(0);
+  nodes.push({ stationId: '' });
+  writeGraph({ nodes, edges });
+  const nodeSelects = $$('#route-graph .node-station');
+  nodeSelects[nodeSelects.length - 1]?.focus();
 }
 
-function addStopRow() {
-  const editor = $('#route-stops-editor');
-  const count = $$('[data-stop-row]', editor).length;
-  editor.insertAdjacentHTML('beforeend', stopRowHtml({}, count));
-  const last = editor.lastElementChild;
-  last?.querySelector('.stop-station')?.focus();
-  updateSeatPreview();
+function removeRouteNode(index) {
+  const data = readGraph();
+  if (data.nodes.length <= 1) return;
+  const nodes = data.nodes.slice();
+  const edges = data.edges.slice();
+  nodes.splice(index, 1);
+  if (index > 0) edges.splice(index - 1, 1);
+  else if (edges.length) edges.splice(0, 1);
+  writeGraph({ nodes, edges });
+}
+
+function moveRouteNode(index, direction) {
+  const data = readGraph();
+  const target = index + direction;
+  if (target < 0 || target >= data.nodes.length) return;
+  const nodes = data.nodes.slice();
+  [nodes[index], nodes[target]] = [nodes[target], nodes[index]];
+  writeGraph({ nodes, edges: data.edges });
+}
+
+function refreshTripSelectors() {
+  const startSelect = $('#trip-start');
+  const endSelect = $('#trip-end');
+  if (!startSelect || !endSelect) return;
+
+  const data = readGraph();
+  const hasPreviousStart = startSelect.value !== '';
+  const hasPreviousEnd = endSelect.value !== '';
+  const previousStart = Number(startSelect.value);
+  const previousEnd = Number(endSelect.value);
+  const options = data.nodes
+    .map((node, index) => {
+      const station = state.stations.find(
+        (item) => String(item.id) === String(node.stationId),
+      );
+      const label = station ? station.name : `محطة ${index + 1}`;
+      return `<option value="${index}">${index + 1}. ${escapeHtml(label)}</option>`;
+    })
+    .join('');
+
+  startSelect.innerHTML = options;
+  endSelect.innerHTML = options;
+  startSelect.value =
+    hasPreviousStart &&
+    Number.isInteger(previousStart) &&
+    previousStart < data.nodes.length
+      ? String(previousStart)
+      : '0';
+  endSelect.value =
+    hasPreviousEnd &&
+    Number.isInteger(previousEnd) &&
+    previousEnd < data.nodes.length
+      ? String(previousEnd)
+      : String(Math.max(0, data.nodes.length - 1));
+}
+
+function updateTripCostPreview() {
+  refreshTripSelectors();
+  const valueBox = $('#trip-cost-value');
+  const rangeBox = $('#trip-cost-range');
+  if (!valueBox) return;
+
+  const data = readGraph();
+  const start = Number($('#trip-start')?.value);
+  const end = Number($('#trip-end')?.value);
+  if (!Number.isInteger(start) || !Number.isInteger(end) || end <= start) {
+    valueBox.textContent = '—';
+    if (rangeBox) rangeBox.textContent = 'اختر محطة بداية قبل محطة النهاية.';
+    return;
+  }
+
+  const total = data.edges
+    .slice(start, end)
+    .reduce((sum, price) => sum + (Number(price) || 0), 0);
+  valueBox.textContent = `${num.format(total)} ج.م`;
+  if (rangeBox) {
+    rangeBox.textContent = `من المحطة ${start + 1} إلى المحطة ${end + 1}`;
+  }
 }
 
 function collectRouteStops() {
-  const rows = $$('#route-stops-editor [data-stop-row]');
-  const stops = rows.map((row) => {
-    const stationId = Number(row.querySelector('.stop-station').value);
-    const station = state.stations.find((item) => Number(item.id) === stationId);
-    const price = Number(row.querySelector('.stop-price').value);
-    return {
-      station_id: station?.id ?? null,
-      name: station?.name || '',
-      governorate: station?.governorate || null,
-      price: Number.isFinite(price) && price >= 0 ? price : 0,
-    };
-  });
-
-  if (stops.length < 2) {
+  const data = readGraph();
+  if (data.nodes.length < 2) {
     throw new Error('أضف محطتين على الأقل للمسار.');
   }
-  if (stops.some((stop) => !stop.station_id)) {
-    throw new Error('اختر محطة لكل صف في محرر المسار.');
+
+  const nodes = data.nodes.map((node) => {
+    const station = state.stations.find(
+      (item) => String(item.id) === String(node.stationId),
+    );
+    return { station, stationId: node.stationId };
+  });
+  if (nodes.some((node) => !node.station)) {
+    throw new Error('اختر محطة لكل عقدة في الرسم.');
   }
-  const ids = stops.map((stop) => String(stop.station_id));
+  const ids = nodes.map((node) => String(node.stationId));
   if (new Set(ids).size !== ids.length) {
     throw new Error('لا يمكن تكرار المحطة نفسها في المسار.');
   }
-  for (let index = 1; index < stops.length; index += 1) {
-    if (stops[index].price < stops[index - 1].price) {
-      throw new Error('يجب أن يكون السعر التراكمي غير متناقص من محطة لأخرى.');
-    }
-  }
-  return stops;
+
+  let cumulative = 0;
+  return nodes.map((node, index) => {
+    if (index > 0) cumulative += Math.max(0, Number(data.edges[index - 1]) || 0);
+    return {
+      station_id: node.station.id,
+      name: node.station.name,
+      governorate: node.station.governorate,
+      price: cumulative,
+    };
+  });
 }
 
 function buildSeatRows(vehicle, total) {
@@ -848,19 +983,7 @@ async function openRouteDialog(route = null) {
     form.seats.value = 14;
   }
 
-  renderStopEditor(
-    stops.map((stop) => ({
-      ...stop,
-      station_id:
-        stop.station_id ||
-        state.stations.find(
-          (station) =>
-            station.name.trim() === String(stop.name || '').trim() &&
-            (!stop.governorate || station.governorate === stop.governorate),
-        )?.id,
-    })),
-  );
-  updateSeatPreview();
+  renderRouteGraph(stops);
   $('#route-dialog').showModal();
 }
 
@@ -2409,32 +2532,24 @@ function bindStatic() {
   $('#station-form').addEventListener('submit', saveStation);
   $('#governorate-form').addEventListener('submit', saveGovernorate);
   $('#inspector-form').addEventListener('submit', saveInspector);
-  $('#btn-add-stop').addEventListener('click', addStopRow);
-  $('#route-stops-editor').addEventListener('click', (event) => {
-    const row = event.target.closest('[data-stop-row]');
-    if (!row) return;
-    const remove = event.target.closest('[data-remove-stop]');
-    if (remove) {
-      row.remove();
-      if (!$$('#route-stops-editor [data-stop-row]').length) addStopRow();
-      renumberStopRows();
-      updateSeatPreview();
+  $('#btn-add-stop').addEventListener('click', addRouteNode);
+  $('#route-graph').addEventListener('click', (event) => {
+    const node = event.target.closest('[data-graph-node]');
+    if (!node) return;
+    const nodes = $$('#route-graph [data-graph-node]');
+    const index = nodes.indexOf(node);
+
+    if (event.target.closest('[data-remove-node]')) {
+      removeRouteNode(index);
       return;
     }
-    const move = event.target.closest('[data-move-stop]');
-    if (move) {
-      const direction = Number(move.dataset.moveStop);
-      if (direction < 0 && row.previousElementSibling) {
-        row.parentElement.insertBefore(row, row.previousElementSibling);
-      } else if (direction > 0 && row.nextElementSibling) {
-        row.parentElement.insertBefore(row.nextElementSibling, row);
-      }
-      renumberStopRows();
-      updateSeatPreview();
-    }
+    const move = event.target.closest('[data-move-node]');
+    if (move) moveRouteNode(index, Number(move.dataset.moveNode));
   });
-  $('#route-stops-editor').addEventListener('change', updateSeatPreview);
-  $('#route-stops-editor').addEventListener('input', updateSeatPreview);
+  $('#route-graph').addEventListener('change', updateTripCostPreview);
+  $('#route-graph').addEventListener('input', updateTripCostPreview);
+  $('#trip-start').addEventListener('change', updateTripCostPreview);
+  $('#trip-end').addEventListener('change', updateTripCostPreview);
   $('#route-form').vehicle_type.addEventListener('change', updateSeatPreview);
   $('#route-form').seats.addEventListener('input', updateSeatPreview);
   $('#btn-apply-stations').addEventListener('click', () => {
