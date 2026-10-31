@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261101b';
+import * as api from './api.js?v=20261101c';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -851,21 +851,20 @@ function buildSeatRows(vehicle, total) {
     const front = total >= 2 ? 2 : total;
     if (front > 0) {
       rows.push(
-        Array.from({ length: front }, (_, index) => ({
+        Array.from({ length: front }, () => ({
           seat: seat++,
-          kind: index === front - 1 && front > 1 ? 'middle' : 'window',
+          kind: 'window',
         })),
       );
     }
     let remaining = total - front;
     while (remaining > 0) {
-      const count = Math.min(6, remaining);
+      const count = remaining > 4 ? 3 : remaining;
       rows.push(
         Array.from({ length: count }, (_, index) => {
-          let kind = 'aisle';
+          let kind = 'middle';
           if (count <= 1) kind = 'window';
           else if (index === 0 || index === count - 1) kind = 'window';
-          else if (index === 1 || index === count - 2) kind = 'middle';
           return { seat: seat++, kind };
         }),
       );
@@ -900,9 +899,8 @@ function buildSeatRows(vehicle, total) {
     rows.push([
       { seat: seat++, kind: 'window' },
       { seat: seat++, kind: 'aisle' },
-      { gap: true },
-      { seat: seat++, kind: 'aisle' },
       { seat: seat++, kind: 'middle' },
+      { seat: seat++, kind: 'aisle' },
       { seat: seat++, kind: 'window' },
     ]);
   }
@@ -917,9 +915,14 @@ function updateSeatPreview() {
   const total = Math.max(1, Math.min(60, Number(form.seats.value) || 1));
   const rows = buildSeatRows(vehicle, total);
   const seatRows = rows
-    .map(
-      (row) => `
+    .map((row, rowIndex) => {
+      const driver =
+        vehicle === 'microbus' && rowIndex === 0
+          ? '<span class="seat-driver-inline" title="السائق"><img src="assets/steering-wheel.svg" alt=""></span>'
+          : '';
+      return `
         <div class="seat-row">
+          ${driver}
           ${row
             .map((cell) =>
               cell.gap
@@ -927,9 +930,16 @@ function updateSeatPreview() {
                 : `<span class="seat-cell seat-${cell.kind}" title="${cell.kind}">${cell.seat}</span>`,
             )
             .join('')}
-        </div>`,
-    )
+        </div>`;
+    })
     .join('');
+  const driver =
+    vehicle === 'microbus'
+      ? ''
+      : `<div class="seat-driver">
+          <img src="assets/steering-wheel.svg" alt="">
+          <span>السائق</span>
+        </div>`;
 
   box.innerHTML = `
     <div class="seat-preview-head">
@@ -941,10 +951,7 @@ function updateSeatPreview() {
       </span>
     </div>
     <div class="seat-vehicle">
-      <div class="seat-driver">
-        <img src="assets/steering-wheel.svg" alt="">
-        <span>السائق</span>
-      </div>
+      ${driver}
       <div class="seat-rows">${seatRows}</div>
     </div>`;
 }
@@ -2550,7 +2557,16 @@ function bindStatic() {
   $('#route-graph').addEventListener('input', updateTripCostPreview);
   $('#trip-start').addEventListener('change', updateTripCostPreview);
   $('#trip-end').addEventListener('change', updateTripCostPreview);
-  $('#route-form').vehicle_type.addEventListener('change', updateSeatPreview);
+  $('#route-form').vehicle_type.addEventListener('change', () => {
+    const form = $('#route-form');
+    const seats = Number(form.seats.value);
+    if (form.vehicle_type.value === 'microbus' && seats === 14) {
+      form.seats.value = 12;
+    } else if (form.vehicle_type.value === 'bus' && seats === 12) {
+      form.seats.value = 14;
+    }
+    updateSeatPreview();
+  });
   $('#route-form').seats.addEventListener('input', updateSeatPreview);
   $('#btn-apply-stations').addEventListener('click', () => {
     state.stationFilters = {

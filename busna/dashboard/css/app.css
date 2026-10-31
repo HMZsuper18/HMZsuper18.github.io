@@ -1544,6 +1544,7 @@ tr.is-unread td {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  direction: ltr;
   max-height: 280px;
   overflow: auto;
   padding: 6px;
@@ -1578,6 +1579,7 @@ tr.is-unread td {
   align-items: center;
   justify-content: center;
   gap: 5px;
+  direction: ltr;
 }
 
 .seat-cell {
@@ -1608,6 +1610,22 @@ tr.is-unread td {
 .seat-gap {
   display: inline-block;
   width: 18px;
+}
+
+.seat-driver-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px dashed rgba(14, 42, 71, 0.3);
+  background: var(--cream-dark);
+}
+
+.seat-driver-inline img {
+  width: 20px;
+  height: 20px;
 }
 
 @media (max-width: 600px) {
