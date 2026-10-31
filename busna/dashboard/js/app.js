@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261031b';
+import * as api from './api.js?v=20261101a';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -7,6 +7,11 @@ const num = new Intl.NumberFormat('en-US');
 const state = {
   session: null,
   routes: [],
+  stations: [],
+  governorates: [],
+  stationFilters: { search: '', governorate: '' },
+  stationEditingId: null,
+  governorateEditingCode: null,
   inspectors: [],
   users: [],
   support: [],
@@ -74,7 +79,7 @@ function allowedViews(session) {
   const views = [];
   if (session.canViewOverview) {
     // Analysts see every screen, just read-only.
-    views.push('overview', 'routes', 'inspectors', 'users');
+    views.push('overview', 'routes', 'stations', 'inspectors', 'users');
   }
   if (session.canManage) views.push('feedback', 'subscriptions');
   if (session.canUseTools) views.push('tools');
@@ -106,6 +111,8 @@ function renderGate(session) {
 
   // Write affordances disappear for read-only roles (analyst).
   $('#btn-add-route').classList.toggle('hidden', !session.canManage);
+  $('#btn-add-station').classList.toggle('hidden', !session.canManage);
+  $('#btn-add-governorate').classList.toggle('hidden', !session.canManage);
   $('#btn-add-inspector').classList.toggle('hidden', !session.canManage);
   $('#users-hint').textContent = session.canEditUsers
     ? session.canAssignAdmin
@@ -118,6 +125,9 @@ function renderGate(session) {
   $('#app').classList.remove('hidden');
   $('.topbar').classList.toggle('hidden', !session.canManage);
   showView(views.includes(currentView()) ? currentView() : views[0]);
+  if (session.canViewOverview) {
+    ensureStations().catch(() => {});
+  }
   if (session.canManage) startNotificationPolling();
 }
 
@@ -154,6 +164,7 @@ function consumeOAuthError() {
 const VIEWS = [
   'overview',
   'routes',
+  'stations',
   'inspectors',
   'feedback',
   'subscriptions',
@@ -179,6 +190,7 @@ function showView(name) {
 
   if (target === 'overview') loadOverview();
   if (target === 'routes') loadRoutes();
+  if (target === 'stations') loadStations();
   if (target === 'inspectors') loadInspectors();
   if (target === 'feedback') loadSupport();
   if (target === 'subscriptions') loadSubscriptions();
@@ -561,12 +573,16 @@ async function loadRoutes(trigger = null) {
   });
 }
 
+function vehicleLabel(value) {
+  return value === 'microbus' ? 'ميكروباص' : 'باص';
+}
+
 function renderRoutes() {
   const body = $('#routes-body');
   const canManage = Boolean(state.session?.canManage);
 
   if (!state.routes.length) {
-    body.innerHTML = '<tr><td colspan="7" class="empty">لا توجد مسارات. أضف أول مسار من الأعلى.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" class="empty">لا توجد مسارات. أضف أول مسار من الأعلى.</td></tr>';
     return;
   }
 
@@ -577,6 +593,7 @@ function renderRoutes() {
         <td><code>${escapeHtml(route.code)}</code></td>
         <td>${escapeHtml(route.origin)} ← ${escapeHtml(route.destination)}</td>
         <td>${formatClock(route.move_time)}</td>
+        <td><span class="badge badge-neutral">${vehicleLabel(route.vehicle_type)}</span></td>
         <td>${num.format(Number(route.price))} ج.م</td>
         <td>${route.seats}</td>
         <td>
@@ -601,109 +618,250 @@ function renderRoutes() {
     .join('');
 }
 
+function stationLabel(station) {
+  return `${station.name} — ${governorateLabel(station.governorate)}`;
+}
+
+function stationOptions(selectedId) {
+  return [
+    '<option value="">اختر محطة…</option>',
+    ...state.stations
+      .filter((station) => station.is_active || String(station.id) === String(selectedId))
+      .map(
+        (station) =>
+          `<option value="${station.id}" ${
+            String(station.id) === String(selectedId) ? 'selected' : ''
+          }>${escapeHtml(stationLabel(station))}</option>`,
+      ),
+  ].join('');
+}
+
+function stopRowHtml(stop = {}, index = 0) {
+  const stationId = stop.station_id ?? '';
+  const price = Number.isFinite(Number(stop.price)) ? Number(stop.price) : 0;
+  return `
+    <div class="node-row" data-stop-row>
+      <span class="node-index">${index + 1}</span>
+      <select class="stop-station" aria-label="المحطة">${stationOptions(stationId)}</select>
+      <input class="stop-price" type="number" min="0" step="1" value="${price}"
+             aria-label="السعر التراكمي" placeholder="السعر">
+      <div class="node-actions">
+        <button type="button" class="btn btn-mini" data-move-stop="-1" title="أعلى">↑</button>
+        <button type="button" class="btn btn-mini" data-move-stop="1" title="أسفل">↓</button>
+        <button type="button" class="btn btn-mini btn-danger-ghost" data-remove-stop title="حذف">×</button>
+      </div>
+    </div>`;
+}
+
+function renumberStopRows() {
+  $$('#route-stops-editor [data-stop-row]').forEach((row, index) => {
+    row.querySelector('.node-index').textContent = String(index + 1);
+  });
+}
+
+function renderStopEditor(stops) {
+  const editor = $('#route-stops-editor');
+  editor.innerHTML = stops.length
+    ? stops.map((stop, index) => stopRowHtml(stop, index)).join('')
+    : stopRowHtml({}, 0);
+  renumberStopRows();
+  updateSeatPreview();
+}
+
+function addStopRow() {
+  const editor = $('#route-stops-editor');
+  const count = $$('[data-stop-row]', editor).length;
+  editor.insertAdjacentHTML('beforeend', stopRowHtml({}, count));
+  const last = editor.lastElementChild;
+  last?.querySelector('.stop-station')?.focus();
+  updateSeatPreview();
+}
+
+function collectRouteStops() {
+  const rows = $$('#route-stops-editor [data-stop-row]');
+  const stops = rows.map((row) => {
+    const stationId = Number(row.querySelector('.stop-station').value);
+    const station = state.stations.find((item) => Number(item.id) === stationId);
+    const price = Number(row.querySelector('.stop-price').value);
+    return {
+      station_id: station?.id ?? null,
+      name: station?.name || '',
+      governorate: station?.governorate || null,
+      price: Number.isFinite(price) && price >= 0 ? price : 0,
+    };
+  });
+
+  if (stops.length < 2) {
+    throw new Error('أضف محطتين على الأقل للمسار.');
+  }
+  if (stops.some((stop) => !stop.station_id)) {
+    throw new Error('اختر محطة لكل صف في محرر المسار.');
+  }
+  const ids = stops.map((stop) => String(stop.station_id));
+  if (new Set(ids).size !== ids.length) {
+    throw new Error('لا يمكن تكرار المحطة نفسها في المسار.');
+  }
+  for (let index = 1; index < stops.length; index += 1) {
+    if (stops[index].price < stops[index - 1].price) {
+      throw new Error('يجب أن يكون السعر التراكمي غير متناقص من محطة لأخرى.');
+    }
+  }
+  return stops;
+}
+
+function buildSeatRows(vehicle, total) {
+  const rows = [];
+  let seat = 1;
+  if (vehicle === 'microbus') {
+    const front = total >= 2 ? 2 : total;
+    if (front > 0) {
+      rows.push(
+        Array.from({ length: front }, (_, index) => ({
+          seat: seat++,
+          kind: index === front - 1 && front > 1 ? 'middle' : 'window',
+        })),
+      );
+    }
+    let remaining = total - front;
+    while (remaining > 0) {
+      const count = Math.min(6, remaining);
+      rows.push(
+        Array.from({ length: count }, (_, index) => {
+          let kind = 'aisle';
+          if (count <= 1) kind = 'window';
+          else if (index === 0 || index === count - 1) kind = 'window';
+          else if (index === 1 || index === count - 2) kind = 'middle';
+          return { seat: seat++, kind };
+        }),
+      );
+      remaining -= count;
+    }
+    return rows;
+  }
+
+  const backRow = total >= 5 ? 5 : 0;
+  let remaining = total - backRow;
+  while (remaining > 0) {
+    const count = Math.min(4, remaining);
+    const row = [];
+    for (let index = 0; index < count; index += 1) {
+      if (index === 2) row.push({ gap: true });
+      const rightSide = index >= 2;
+      row.push({
+        seat: seat++,
+        kind: !rightSide
+          ? index === 0
+            ? 'window'
+            : 'aisle'
+          : index === count - 1
+            ? 'window'
+            : 'aisle',
+      });
+    }
+    rows.push(row);
+    remaining -= count;
+  }
+  if (backRow > 0) {
+    rows.push([
+      { seat: seat++, kind: 'window' },
+      { seat: seat++, kind: 'aisle' },
+      { gap: true },
+      { seat: seat++, kind: 'aisle' },
+      { seat: seat++, kind: 'middle' },
+      { seat: seat++, kind: 'window' },
+    ]);
+  }
+  return rows;
+}
+
+function updateSeatPreview() {
+  const box = $('#seat-preview');
+  if (!box) return;
+  const form = $('#route-form');
+  const vehicle = form.vehicle_type.value;
+  const total = Math.max(1, Math.min(60, Number(form.seats.value) || 1));
+  const rows = buildSeatRows(vehicle, total);
+  const seatRows = rows
+    .map(
+      (row) => `
+        <div class="seat-row">
+          ${row
+            .map((cell) =>
+              cell.gap
+                ? '<span class="seat-gap"></span>'
+                : `<span class="seat-cell seat-${cell.kind}" title="${cell.kind}">${cell.seat}</span>`,
+            )
+            .join('')}
+        </div>`,
+    )
+    .join('');
+
+  box.innerHTML = `
+    <div class="seat-preview-head">
+      <strong>${vehicleLabel(vehicle)} · ${total} مقعد</strong>
+      <span class="seat-legend">
+        <i class="seat-dot seat-window"></i> شباك
+        <i class="seat-dot seat-middle"></i> أوسط
+        <i class="seat-dot seat-aisle"></i> ممر
+      </span>
+    </div>
+    <div class="seat-vehicle">
+      <div class="seat-driver">
+        <img src="assets/steering-wheel.svg" alt="">
+        <span>السائق</span>
+      </div>
+      <div class="seat-rows">${seatRows}</div>
+    </div>`;
+}
+
 async function openRouteDialog(route = null) {
   const form = $('#route-form');
   form.reset();
   setFormError('route', null);
   state.routeEditingId = route?.id ?? null;
 
+  try {
+    await ensureStations();
+  } catch (error) {
+    setFormError('route', error.message);
+    return;
+  }
+
   $('#route-dialog-title').textContent = route ? 'تعديل المسار' : 'مسار جديد';
   $('#btn-save-route').textContent = route ? 'حفظ التعديلات' : 'إضافة المسار';
 
+  let stops = [];
   if (route) {
     form.code.value = route.code;
-    form.price.value = route.price;
-    form.origin.value = route.origin;
-    form.destination.value = route.destination;
     form.move_time.value = formatTime(route.move_time);
     form.seats.value = route.seats;
+    form.vehicle_type.value = route.vehicle_type || 'bus';
     form.is_active.checked = Boolean(route.is_active);
-    form.stops.value = '';
     try {
-      const stops = await api.fetchRouteStops(route.id);
-      form.stops.value = formatStops(stops);
+      stops = await api.fetchRouteStops(route.id);
     } catch (_) {
-      // Stops are optional here; an empty box keeps the current ones.
+      stops = [];
     }
   } else {
     form.is_active.checked = true;
-    form.stops.value = '';
+    form.vehicle_type.value = 'bus';
+    form.seats.value = 14;
   }
 
+  renderStopEditor(
+    stops.map((stop) => ({
+      ...stop,
+      station_id:
+        stop.station_id ||
+        state.stations.find(
+          (station) =>
+            station.name.trim() === String(stop.name || '').trim() &&
+            (!stop.governorate || station.governorate === stop.governorate),
+        )?.id,
+    })),
+  );
+  updateSeatPreview();
   $('#route-dialog').showModal();
-}
-
-// One stop per line:
-// `name | cumulative price | governorate | location`
-// The location column accepts coordinates (`30.5,31.7`), a maps URL, or text.
-function parseStops(raw) {
-  return raw
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const parts = line.split('|').map((part) => part.trim());
-      const [nameRaw, priceRaw, govRaw, locationRaw] = parts;
-      const name = nameRaw || '';
-      const parsed = Number(priceRaw || '0');
-      const govText = (govRaw || '').toLowerCase();
-
-      let governorate = null;
-      if (govText === 'sharkia' || govText.includes('شرقية')) {
-        governorate = 'sharkia';
-      } else if (
-        govText === 'ismailia' ||
-        govText.includes('اسماعيلية') ||
-        govText.includes('إسماعيلية')
-      ) {
-        governorate = 'ismailia';
-      }
-
-      const location = locationRaw || '';
-      let latitude = null;
-      let longitude = null;
-      let mapsUrl = null;
-      let description = null;
-
-      if (location) {
-        const coordinates = location.match(
-          /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/,
-        );
-        if (coordinates) {
-          latitude = Number(coordinates[1]);
-          longitude = Number(coordinates[2]);
-        } else if (/^https?:\/\//i.test(location)) {
-          mapsUrl = location;
-        } else {
-          description = location;
-        }
-      }
-
-      return {
-        name,
-        price: Number.isFinite(parsed) && parsed >= 0 ? parsed : 0,
-        governorate,
-        latitude,
-        longitude,
-        maps_url: mapsUrl,
-        description,
-      };
-    })
-    .filter((stop) => stop.name);
-}
-
-function formatStops(stops) {
-  return stops
-    .map((stop) => {
-      const location =
-        stop.latitude != null && stop.longitude != null
-          ? `${stop.latitude},${stop.longitude}`
-          : stop.maps_url || stop.description || '';
-      const parts = [stop.name, Number(stop.price), stop.governorate || ''];
-      if (location) parts.push(location);
-      return parts.join(' | ');
-    })
-    .join('\n');
 }
 
 async function saveRoute(event) {
@@ -712,21 +870,23 @@ async function saveRoute(event) {
   const saveButton = $('#btn-save-route');
   setFormError('route', null);
 
-  const stops = parseStops(form.stops.value);
-  const hasStops = stops.length > 0;
-  if (hasStops && stops.length < 2) {
-    setFormError('route', 'أدخل محطتين على الأقل، كل محطة في سطر: الاسم | السعر.');
+  let stops;
+  try {
+    stops = collectRouteStops();
+  } catch (error) {
+    setFormError('route', error.message);
     return;
   }
 
-  const last = hasStops ? stops[stops.length - 1] : null;
+  const last = stops[stops.length - 1];
   const payload = {
     code: form.code.value.trim().toUpperCase(),
-    price: hasStops ? last.price : Number(form.price.value),
-    origin: hasStops ? stops[0].name : form.origin.value.trim(),
-    destination: hasStops ? last.name : form.destination.value.trim(),
+    price: last.price,
+    origin: stops[0].name,
+    destination: last.name,
     move_time: form.move_time.value,
     seats: Number(form.seats.value),
+    vehicle_type: form.vehicle_type.value,
     is_active: form.is_active.checked,
   };
 
@@ -736,16 +896,7 @@ async function saveRoute(event) {
     const route = creating
       ? await api.createRoute(payload)
       : await api.updateRoute(state.routeEditingId, payload);
-
-    if (hasStops) {
-      await api.replaceRouteStops(route.id, stops);
-    } else if (creating) {
-      await api.replaceRouteStops(route.id, [
-        { name: payload.origin, price: 0 },
-        { name: payload.destination, price: payload.price },
-      ]);
-    }
-
+    await api.replaceRouteStops(route.id, stops);
     toast(creating ? 'تمت إضافة المسار.' : 'تم حفظ التعديلات.');
     $('#route-dialog').close();
     await loadRoutes();
@@ -753,6 +904,242 @@ async function saveRoute(event) {
     setFormError('route', error.message);
   } finally {
     saveButton.disabled = false;
+  }
+}
+
+// --------------------------------------------------------------- stations --
+
+function populateGovernorateSelects() {
+  const optionFor = (governorate) =>
+    `<option value="${escapeHtml(governorate.code)}">${escapeHtml(governorate.name_ar)}</option>`;
+  const options = state.governorates
+    .filter((governorate) => governorate.is_active)
+    .map(optionFor)
+    .join('');
+  const allOptions = state.governorates.map(optionFor).join('');
+
+  ['inspectors-governorate', 'users-governorate', 'subscriptions-governorate', 'stations-governorate'].forEach(
+    (id) => {
+      const select = document.getElementById(id);
+      if (!select) return;
+      const current = select.value;
+      select.innerHTML = `<option value="">كل المحافظات</option>${options}`;
+      select.value = current;
+    },
+  );
+
+  const stationSelect = $('#station-governorate');
+  if (stationSelect) {
+    const current = stationSelect.value;
+    stationSelect.innerHTML = allOptions;
+    if (current) stationSelect.value = current;
+  }
+}
+
+async function ensureStations(force = false) {
+  if (!force && state.stations.length && state.governorates.length) return;
+  const [governorates, stations] = await Promise.all([
+    api.fetchGovernorates(),
+    api.fetchStations(),
+  ]);
+  state.governorates = governorates;
+  state.stations = stations;
+  populateGovernorateSelects();
+}
+
+async function loadStations(trigger = null) {
+  const errorBox = $('#stations-error');
+  errorBox.classList.add('hidden');
+  $('#governorates-error').classList.add('hidden');
+
+  return withBusy(trigger, async () => {
+    try {
+      await ensureStations(true);
+      renderStations();
+      renderGovernorates();
+    } catch (error) {
+      errorBox.textContent = error.message;
+      errorBox.classList.remove('hidden');
+    }
+  });
+}
+
+function filteredStations() {
+  const { search, governorate } = state.stationFilters;
+  const needle = search.trim().toLowerCase();
+  return state.stations.filter((station) => {
+    if (governorate && station.governorate !== governorate) return false;
+    if (!needle) return true;
+    return (
+      station.name.toLowerCase().includes(needle) ||
+      station.code.toLowerCase().includes(needle)
+    );
+  });
+}
+
+function renderStations() {
+  const body = $('#stations-body');
+  const rows = filteredStations();
+  const canManage = Boolean(state.session?.canManage);
+
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="5" class="empty">لا توجد محطات مطابقة.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = rows
+    .map(
+      (station) => `
+      <tr>
+        <td><code>${escapeHtml(station.code)}</code></td>
+        <td>${escapeHtml(station.name)}</td>
+        <td>${escapeHtml(governorateLabel(station.governorate))}</td>
+        <td>
+          ${canManage
+            ? `<button class="badge ${station.is_active ? 'badge-ok' : 'badge-off'}"
+                      data-toggle-station="${station.id}" type="button">
+                ${station.is_active ? 'مفعّلة' : 'موقوفة'}
+              </button>`
+            : `<span class="badge ${station.is_active ? 'badge-ok' : 'badge-off'}">
+                ${station.is_active ? 'مفعّلة' : 'موقوفة'}
+              </span>`}
+        </td>
+        <td class="row-actions">
+          ${canManage
+            ? `<button class="btn btn-mini" data-edit-station="${station.id}" type="button">تعديل</button>
+               <button class="btn btn-mini btn-danger-ghost" data-delete-station="${station.id}" type="button">حذف</button>`
+            : '<span class="muted small">—</span>'}
+        </td>
+      </tr>`,
+    )
+    .join('');
+}
+
+function renderGovernorates() {
+  const body = $('#governorates-body');
+  const canManage = Boolean(state.session?.canManage);
+  if (!state.governorates.length) {
+    body.innerHTML = '<tr><td colspan="6" class="empty">لا توجد محافظات.</td></tr>';
+    return;
+  }
+  body.innerHTML = state.governorates
+    .map(
+      (governorate) => `
+      <tr>
+        <td><code>${escapeHtml(governorate.code)}</code></td>
+        <td>${escapeHtml(governorate.name_ar)}</td>
+        <td>${escapeHtml(governorate.name_en || '—')}</td>
+        <td>${num.format(Number(governorate.sort_order) || 0)}</td>
+        <td><span class="badge ${governorate.is_active ? 'badge-ok' : 'badge-off'}">
+          ${governorate.is_active ? 'مفعّلة' : 'موقوفة'}
+        </span></td>
+        <td class="row-actions">
+          ${canManage
+            ? `<button class="btn btn-mini" data-edit-governorate="${escapeHtml(governorate.code)}" type="button">تعديل</button>
+               <button class="btn btn-mini btn-danger-ghost" data-delete-governorate="${escapeHtml(governorate.code)}" type="button">حذف</button>`
+            : '<span class="muted small">—</span>'}
+        </td>
+      </tr>`,
+    )
+    .join('');
+}
+
+async function openStationDialog(station = null) {
+  try {
+    await ensureStations();
+  } catch (error) {
+    toast(error.message);
+    return;
+  }
+  const form = $('#station-form');
+  form.reset();
+  setFormError('station', null);
+  state.stationEditingId = station?.id ?? null;
+  $('#station-dialog-title').textContent = station ? 'تعديل المحطة' : 'محطة جديدة';
+  $('#btn-save-station').textContent = station ? 'حفظ التعديلات' : 'إضافة المحطة';
+  populateGovernorateSelects();
+  if (station) {
+    form.code.value = station.code;
+    form.name.value = station.name;
+    form.governorate.value = station.governorate;
+    form.is_active.checked = Boolean(station.is_active);
+  } else {
+    form.is_active.checked = true;
+  }
+  $('#station-dialog').showModal();
+}
+
+async function saveStation(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = $('#btn-save-station');
+  setFormError('station', null);
+  const payload = {
+    code: form.code.value.trim().toUpperCase(),
+    name: form.name.value.trim(),
+    governorate: form.governorate.value,
+    is_active: form.is_active.checked,
+  };
+  button.disabled = true;
+  try {
+    if (state.stationEditingId == null) await api.createStation(payload);
+    else await api.updateStation(state.stationEditingId, payload);
+    toast(state.stationEditingId == null ? 'تمت إضافة المحطة.' : 'تم حفظ المحطة.');
+    $('#station-dialog').close();
+    await loadStations();
+  } catch (error) {
+    setFormError('station', error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function openGovernorateDialog(governorate = null) {
+  const form = $('#governorate-form');
+  form.reset();
+  setFormError('governorate', null);
+  state.governorateEditingCode = governorate?.code ?? null;
+  $('#governorate-dialog-title').textContent = governorate ? 'تعديل المحافظة' : 'محافظة جديدة';
+  $('#btn-save-governorate').textContent = governorate ? 'حفظ التعديلات' : 'إضافة المحافظة';
+  form.code.readOnly = Boolean(governorate);
+  if (governorate) {
+    form.code.value = governorate.code;
+    form.name_ar.value = governorate.name_ar;
+    form.name_en.value = governorate.name_en || '';
+    form.sort_order.value = governorate.sort_order || 0;
+    form.is_active.checked = Boolean(governorate.is_active);
+  } else {
+    form.sort_order.value = state.governorates.length + 1;
+    form.is_active.checked = true;
+  }
+  $('#governorate-dialog').showModal();
+}
+
+async function saveGovernorate(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = $('#btn-save-governorate');
+  setFormError('governorate', null);
+  const payload = {
+    name_ar: form.name_ar.value.trim(),
+    name_en: form.name_en.value.trim(),
+    sort_order: Number(form.sort_order.value) || 0,
+    is_active: form.is_active.checked,
+  };
+  button.disabled = true;
+  try {
+    if (state.governorateEditingCode == null) {
+      await api.createGovernorate({ ...payload, code: form.code.value.trim().toLowerCase() });
+    } else {
+      await api.updateGovernorate(state.governorateEditingCode, payload);
+    }
+    toast(state.governorateEditingCode == null ? 'تمت إضافة المحافظة.' : 'تم حفظ المحافظة.');
+    $('#governorate-dialog').close();
+    await loadStations();
+  } catch (error) {
+    setFormError('governorate', error.message);
+  } finally {
+    button.disabled = false;
   }
 }
 
@@ -2016,8 +2403,55 @@ function bindStatic() {
   });
   $('#btn-add-route').addEventListener('click', () => openRouteDialog());
   $('#btn-add-inspector').addEventListener('click', () => openInspectorDialog());
+  $('#btn-add-station').addEventListener('click', () => openStationDialog());
+  $('#btn-add-governorate').addEventListener('click', () => openGovernorateDialog());
   $('#route-form').addEventListener('submit', saveRoute);
+  $('#station-form').addEventListener('submit', saveStation);
+  $('#governorate-form').addEventListener('submit', saveGovernorate);
   $('#inspector-form').addEventListener('submit', saveInspector);
+  $('#btn-add-stop').addEventListener('click', addStopRow);
+  $('#route-stops-editor').addEventListener('click', (event) => {
+    const row = event.target.closest('[data-stop-row]');
+    if (!row) return;
+    const remove = event.target.closest('[data-remove-stop]');
+    if (remove) {
+      row.remove();
+      if (!$$('#route-stops-editor [data-stop-row]').length) addStopRow();
+      renumberStopRows();
+      updateSeatPreview();
+      return;
+    }
+    const move = event.target.closest('[data-move-stop]');
+    if (move) {
+      const direction = Number(move.dataset.moveStop);
+      if (direction < 0 && row.previousElementSibling) {
+        row.parentElement.insertBefore(row, row.previousElementSibling);
+      } else if (direction > 0 && row.nextElementSibling) {
+        row.parentElement.insertBefore(row.nextElementSibling, row);
+      }
+      renumberStopRows();
+      updateSeatPreview();
+    }
+  });
+  $('#route-stops-editor').addEventListener('change', updateSeatPreview);
+  $('#route-stops-editor').addEventListener('input', updateSeatPreview);
+  $('#route-form').vehicle_type.addEventListener('change', updateSeatPreview);
+  $('#route-form').seats.addEventListener('input', updateSeatPreview);
+  $('#btn-apply-stations').addEventListener('click', () => {
+    state.stationFilters = {
+      search: $('#stations-search').value,
+      governorate: $('#stations-governorate').value,
+    };
+    renderStations();
+  });
+  $('#stations-search').addEventListener('input', () => {
+    state.stationFilters.search = $('#stations-search').value;
+    renderStations();
+  });
+  $('#stations-governorate').addEventListener('change', () => {
+    state.stationFilters.governorate = $('#stations-governorate').value;
+    renderStations();
+  });
 
   $$('#inspector-mode .segment').forEach((button) => {
     button.addEventListener('click', () => {
@@ -2075,6 +2509,74 @@ function bindStatic() {
       } catch (error) {
         $('#routes-error').textContent = error.message;
         $('#routes-error').classList.remove('hidden');
+      }
+    }
+  });
+
+  $('#stations-body').addEventListener('click', async (event) => {
+    const edit = event.target.closest('[data-edit-station]');
+    const remove = event.target.closest('[data-delete-station]');
+    const toggle = event.target.closest('[data-toggle-station]');
+
+    if (edit) {
+      const station = state.stations.find((item) => String(item.id) === edit.dataset.editStation);
+      if (station) openStationDialog(station);
+      return;
+    }
+
+    if (remove) {
+      const station = state.stations.find((item) => String(item.id) === remove.dataset.deleteStation);
+      if (!station) return;
+      if (!window.confirm(`حذف المحطة ${station.name}؟ ستبقى محطات المسارات السابقة كنصوص.`)) return;
+      try {
+        await api.deleteStation(station.id);
+        toast('تم حذف المحطة.');
+        await loadStations();
+      } catch (error) {
+        $('#stations-error').textContent = error.message;
+        $('#stations-error').classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (toggle) {
+      const station = state.stations.find((item) => String(item.id) === toggle.dataset.toggleStation);
+      if (!station) return;
+      try {
+        await api.updateStation(station.id, { is_active: !station.is_active });
+        await loadStations();
+      } catch (error) {
+        $('#stations-error').textContent = error.message;
+        $('#stations-error').classList.remove('hidden');
+      }
+    }
+  });
+
+  $('#governorates-body').addEventListener('click', async (event) => {
+    const edit = event.target.closest('[data-edit-governorate]');
+    const remove = event.target.closest('[data-delete-governorate]');
+
+    if (edit) {
+      const governorate = state.governorates.find(
+        (item) => item.code === edit.dataset.editGovernorate,
+      );
+      if (governorate) openGovernorateDialog(governorate);
+      return;
+    }
+
+    if (remove) {
+      const governorate = state.governorates.find(
+        (item) => item.code === remove.dataset.deleteGovernorate,
+      );
+      if (!governorate) return;
+      if (!window.confirm(`حذف محافظة ${governorate.name_ar}؟`)) return;
+      try {
+        await api.deleteGovernorate(governorate.code);
+        toast('تم حذف المحافظة.');
+        await loadStations();
+      } catch (error) {
+        $('#governorates-error').textContent = error.message;
+        $('#governorates-error').classList.remove('hidden');
       }
     }
   });

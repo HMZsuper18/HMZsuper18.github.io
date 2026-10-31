@@ -7,20 +7,20 @@
   <meta name="robots" content="noindex, nofollow">
   <title>باصنا | لوحة التحكم</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="stylesheet" href="css/app.css?v=20261031c">
+  <link rel="stylesheet" href="css/app.css?v=20261101a">
 </head>
 <body>
 
   <!-- ---------------------------------------------------------------- boot -->
   <div id="boot" class="boot">
-    <div class="boot-mark">باصنا</div>
+    <img class="boot-logo" src="assets/busna-logo.svg" alt="باصنا">
     <div class="boot-bar"><span></span></div>
   </div>
 
   <!-- --------------------------------------------------------------- login -->
   <div id="login" class="login hidden">
     <div class="login-card">
-      <div class="login-mark">باصنا</div>
+      <img class="login-logo" src="assets/busna-logo.svg" alt="باصنا">
       <h1>لوحة تحكم باصنا</h1>
       <p class="muted">سجّل الدخول بحساب Google الخاص بك لإدارة المسارات والمفتشين.</p>
       <button id="btn-google" class="btn btn-google btn-block" type="button">
@@ -60,7 +60,10 @@
   <div id="app" class="shell hidden">
     <aside class="sidebar">
       <div class="brand">
-        <span class="brand-mark">باصنا</span>
+        <div class="brand-lockup">
+          <img class="brand-logo" src="assets/busna-logo.svg" alt="">
+          <span class="brand-mark">باصنا</span>
+        </div>
         <span class="brand-sub">لوحة التحكم</span>
       </div>
       <nav class="nav" id="nav">
@@ -69,6 +72,9 @@
         </button>
         <button class="nav-item" data-view="routes" type="button">
           <span class="nav-dot"></span> المسارات
+        </button>
+        <button class="nav-item" data-view="stations" type="button">
+          <span class="nav-dot"></span> المحطات
         </button>
         <button class="nav-item" data-view="inspectors" type="button">
           <span class="nav-dot"></span> المفتشون
@@ -212,6 +218,7 @@
                 <th>الكود</th>
                 <th>المسار</th>
                 <th>الموعد</th>
+                <th>المركبة</th>
                 <th>السعر</th>
                 <th>المقاعد</th>
                 <th>الحالة</th>
@@ -219,7 +226,66 @@
               </tr>
             </thead>
             <tbody id="routes-body">
-              <tr><td colspan="7" class="empty">جارٍ التحميل…</td></tr>
+              <tr><td colspan="8" class="empty">جارٍ التحميل…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ---------------------------------------------------------- stations -->
+      <section id="view-stations" class="view hidden">
+        <header class="view-head">
+          <div>
+            <h1>المحطات</h1>
+            <p class="muted">دليل المحافظات والمحطات التي تُبنى منها مسارات الرحلات.</p>
+          </div>
+          <div class="row-actions">
+            <button id="btn-add-governorate" class="btn btn-ghost" type="button">+ محافظة</button>
+            <button id="btn-add-station" class="btn btn-primary" type="button">+ محطة</button>
+          </div>
+        </header>
+        <div id="stations-error" class="banner banner-danger hidden"></div>
+
+        <div class="filter-bar">
+          <input id="stations-search" type="search" placeholder="ابحث باسم المحطة أو الكود…">
+          <select id="stations-governorate">
+            <option value="">كل المحافظات</option>
+          </select>
+          <button id="btn-apply-stations" class="btn btn-ghost" type="button">تصفية</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>الكود</th>
+                <th>المحطة</th>
+                <th>المحافظة</th>
+                <th>الحالة</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="stations-body">
+              <tr><td colspan="5" class="empty">جارٍ التحميل…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 class="section-title">المحافظات</h2>
+        <div id="governorates-error" class="banner banner-danger hidden"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>الكود</th>
+                <th>الاسم بالعربية</th>
+                <th>الاسم بالإنجليزية</th>
+                <th>الترتيب</th>
+                <th>الحالة</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="governorates-body">
+              <tr><td colspan="6" class="empty">جارٍ التحميل…</td></tr>
             </tbody>
           </table>
         </div>
@@ -502,8 +568,74 @@
     </main>
   </div>
 
+  <!-- ------------------------------------------------------- station dialog -->
+  <dialog id="station-dialog" class="dialog">
+    <form id="station-form" method="dialog">
+      <h2 id="station-dialog-title">محطة جديدة</h2>
+      <div class="field-grid">
+        <label class="field">
+          <span>كود المحطة</span>
+          <input name="code" type="text" placeholder="AB" required maxlength="3"
+                 pattern="[A-Za-z]{2,3}" autocomplete="off" dir="ltr">
+        </label>
+        <label class="field">
+          <span>المحافظة</span>
+          <select name="governorate" id="station-governorate" required></select>
+        </label>
+      </div>
+      <label class="field field-full">
+        <span>اسم المحطة</span>
+        <input name="name" type="text" required maxlength="80" autocomplete="off">
+      </label>
+      <label class="field field-check">
+        <input name="is_active" type="checkbox" checked>
+        <span>محطة مفعّلة</span>
+      </label>
+      <p class="error hidden" data-error-for="station"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close="station-dialog">إلغاء</button>
+        <button type="submit" class="btn btn-primary" id="btn-save-station">حفظ</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- --------------------------------------------------- governorate dialog -->
+  <dialog id="governorate-dialog" class="dialog">
+    <form id="governorate-form" method="dialog">
+      <h2 id="governorate-dialog-title">محافظة جديدة</h2>
+      <div class="field-grid">
+        <label class="field">
+          <span>الكود</span>
+          <input name="code" type="text" placeholder="cairo" required maxlength="20"
+                 pattern="[a-z]{2,20}" autocomplete="off" dir="ltr">
+        </label>
+        <label class="field">
+          <span>الترتيب</span>
+          <input name="sort_order" type="number" min="0" step="1" value="0">
+        </label>
+        <label class="field">
+          <span>الاسم بالعربية</span>
+          <input name="name_ar" type="text" required maxlength="60" autocomplete="off">
+        </label>
+        <label class="field">
+          <span>الاسم بالإنجليزية</span>
+          <input name="name_en" type="text" maxlength="60" autocomplete="off" dir="ltr">
+        </label>
+      </div>
+      <label class="field field-check">
+        <input name="is_active" type="checkbox" checked>
+        <span>محافظة مفعّلة</span>
+      </label>
+      <p class="error hidden" data-error-for="governorate"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close="governorate-dialog">إلغاء</button>
+        <button type="submit" class="btn btn-primary" id="btn-save-governorate">حفظ</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- --------------------------------------------------------- route dialog -->
-  <dialog id="route-dialog" class="dialog">
+  <dialog id="route-dialog" class="dialog dialog-wide">
     <form id="route-form" method="dialog">
       <h2 id="route-dialog-title">مسار جديد</h2>
       <div class="field-grid">
@@ -512,35 +644,36 @@
           <input name="code" type="text" placeholder="AH-ISM" required maxlength="12" autocomplete="off">
         </label>
         <label class="field">
-          <span>السعر (ج.م)</span>
-          <input name="price" type="number" min="0" step="1" required>
-        </label>
-        <label class="field">
-          <span>من</span>
-          <input name="origin" type="text" required maxlength="60" autocomplete="off">
-        </label>
-        <label class="field">
-          <span>إلى</span>
-          <input name="destination" type="text" required maxlength="60" autocomplete="off">
-        </label>
-        <label class="field">
           <span>موعد الانطلاق</span>
           <input name="move_time" type="time" required>
         </label>
         <label class="field">
           <span>عدد المقاعد</span>
-          <input name="seats" type="number" min="1" step="1" required>
+          <input name="seats" type="number" min="1" max="60" step="1" required>
+        </label>
+        <label class="field">
+          <span>نوع المركبة</span>
+          <select name="vehicle_type">
+            <option value="bus">باص</option>
+            <option value="microbus">ميكروباص</option>
+          </select>
         </label>
       </div>
-      <label class="field field-full">
-        <span>المحطات (سطر لكل محطة: الاسم | السعر | المحافظة | الموقع)</span>
-        <textarea name="stops" rows="5" spellcheck="false"
-                  placeholder="أبو حماد | 0 | sharkia | 30.543,31.678&#10;التل الكبير | 40 | ismailia | https://maps.app.goo.gl/...&#10;القصاصين | 100 | ismailia | أمام مسجد القصاصين"></textarea>
+      <div class="field field-full">
+        <div class="node-editor-head">
+          <span>محطات المسار بالترتيب</span>
+          <button id="btn-add-stop" class="btn btn-mini" type="button">+ إضافة محطة</button>
+        </div>
+        <div id="route-stops-editor" class="node-editor"></div>
         <span class="hint muted">
-          المحافظة: sharkia أو ismailia. الموقع: إحداثيات (lat,lng) أو رابط خرائط أو وصف.
-          اتركها فارغة لمسار من محطتين (من/إلى).
+          اختر المحطات من الدليل ورتّبها بالأسهم. السعر تراكمي من أول محطة.
+          أضف محطتين على الأقل.
         </span>
-      </label>
+      </div>
+      <div class="field field-full">
+        <span>معاينة تخطيط المقاعد</span>
+        <div id="seat-preview" class="seat-preview" aria-live="polite"></div>
+      </div>
       <label class="field field-check">
         <input name="is_active" type="checkbox" checked>
         <span>مسار فعّال (ظاهر للطلاب)</span>
@@ -716,6 +849,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="js/vendor/chart.umd.min.js?v=20261031b"></script>
-  <script type="module" src="js/app.js?v=20261031b"></script>
+  <script type="module" src="js/app.js?v=20261101a"></script>
 </body>
 </html>

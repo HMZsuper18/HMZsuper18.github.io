@@ -121,7 +121,8 @@ export async function fetchRecentBookings(limit = 12) {
 
 // ------------------------------------------------------------------ routes --
 
-const ROUTE_COLUMNS = 'id, code, price, origin, destination, seats, move_time, is_active';
+const ROUTE_COLUMNS =
+  'id, code, price, origin, destination, seats, move_time, is_active, vehicle_type';
 
 export async function fetchRoutes() {
   const [result, countResult] = await Promise.all([
@@ -161,6 +162,80 @@ export async function setRouteActive(id, isActive) {
 
 export async function deleteRoute(id) {
   const { error } = await supabase.from('routes').delete().eq('id', id);
+  if (error) throw new Error(mapError(error));
+}
+
+// ------------------------------------------------------- stations/govs --
+
+export async function fetchGovernorates() {
+  const { data, error } = await supabase
+    .from('governorates')
+    .select('code, name_ar, name_en, sort_order, is_active')
+    .order('sort_order')
+    .order('name_ar');
+  if (error) throw new Error(mapError(error));
+  return data || [];
+}
+
+export async function createGovernorate(payload) {
+  const { data, error } = await supabase
+    .from('governorates')
+    .insert(payload)
+    .select('*')
+    .single();
+  if (error) throw new Error(mapError(error));
+  return data;
+}
+
+export async function updateGovernorate(code, payload) {
+  const { data, error } = await supabase
+    .from('governorates')
+    .update(payload)
+    .eq('code', code)
+    .select('*')
+    .single();
+  if (error) throw new Error(mapError(error));
+  return data;
+}
+
+export async function deleteGovernorate(code) {
+  const { error } = await supabase.from('governorates').delete().eq('code', code);
+  if (error) throw new Error(mapError(error));
+}
+
+export async function fetchStations() {
+  const { data, error } = await supabase
+    .from('stations')
+    .select('id, code, name, governorate, is_active, created_at')
+    .order('governorate')
+    .order('name');
+  if (error) throw new Error(mapError(error));
+  return data || [];
+}
+
+export async function createStation(payload) {
+  const { data, error } = await supabase
+    .from('stations')
+    .insert(payload)
+    .select('*')
+    .single();
+  if (error) throw new Error(mapError(error));
+  return data;
+}
+
+export async function updateStation(id, payload) {
+  const { data, error } = await supabase
+    .from('stations')
+    .update(payload)
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw new Error(mapError(error));
+  return data;
+}
+
+export async function deleteStation(id) {
+  const { error } = await supabase.from('stations').delete().eq('id', id);
   if (error) throw new Error(mapError(error));
 }
 
@@ -447,7 +522,7 @@ export async function fetchRouteStops(routeId) {
   const { data, error } = await supabase
     .from('route_stops')
     .select(
-      'id, route_id, seq, name, price, governorate, latitude, longitude, maps_url, description',
+      'id, route_id, seq, name, price, governorate, station_id, latitude, longitude, maps_url, description',
     )
     .eq('route_id', routeId)
     .order('seq');
@@ -470,6 +545,7 @@ export async function replaceRouteStops(routeId, stops) {
       name: stop.name,
       price: stop.price,
       governorate: stop.governorate || null,
+      station_id: stop.station_id ?? null,
       latitude: stop.latitude ?? null,
       longitude: stop.longitude ?? null,
       maps_url: stop.maps_url || null,

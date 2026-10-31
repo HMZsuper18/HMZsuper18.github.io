@@ -1259,3 +1259,225 @@ tr.is-unread td {
     position: static;
   }
 }
+
+/* ------------------------------------------------------ branding / logos */
+
+.boot-logo {
+  width: 110px;
+  height: auto;
+}
+
+.login-logo {
+  width: 92px;
+  height: auto;
+  margin-bottom: 4px;
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-logo {
+  width: 34px;
+  height: auto;
+  flex: 0 0 auto;
+}
+
+/* ----------------------------------------------------- station node editor */
+
+.field select {
+  font: inherit;
+  font-weight: 500;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+}
+
+.field select:focus {
+  outline: 2px solid rgba(46, 125, 209, 0.4);
+  border-color: var(--accent);
+}
+
+.badge-neutral {
+  background: rgba(91, 107, 124, 0.12);
+  color: var(--navy-light);
+}
+
+.node-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.node-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.node-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 92px auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--cream);
+}
+
+.node-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: var(--on-navy);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.node-row select,
+.node-row input {
+  min-width: 0;
+  font: inherit;
+  font-weight: 500;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--text);
+}
+
+.node-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.node-actions .btn {
+  min-width: 30px;
+  padding: 4px 7px;
+}
+
+/* --------------------------------------------------------- seat preview */
+
+.seat-preview {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: var(--cream);
+}
+
+.seat-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  font-size: 0.86rem;
+}
+
+.seat-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.seat-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-inline-start: 7px;
+}
+
+.seat-vehicle {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow: auto;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+}
+
+.seat-driver {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.seat-driver img {
+  width: 24px;
+  height: 24px;
+}
+
+.seat-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.seat-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.seat-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 28px;
+  border-radius: 7px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--navy);
+  border: 1px solid rgba(14, 42, 71, 0.18);
+}
+
+.seat-window {
+  background: rgba(46, 125, 209, 0.16);
+}
+
+.seat-middle {
+  background: rgba(242, 169, 59, 0.18);
+}
+
+.seat-aisle {
+  background: rgba(91, 107, 124, 0.12);
+}
+
+.seat-gap {
+  display: inline-block;
+  width: 18px;
+}
+
+@media (max-width: 600px) {
+  .node-row {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+  .node-row .stop-price,
+  .node-actions {
+    grid-column: 2;
+  }
+}

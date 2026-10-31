@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 586" role="img" aria-labelledby="title desc">
+  <title id="title">Busna</title>
+  <desc id="desc">A graduation cap above a clean outlined bus front.</desc>
+  <g fill="none" stroke="#0E2A47" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <!-- Graduation cap -->
+    <path fill="#FFFFFF" d="M256 18 501 108 256 199 11 108Z"/>
+    <path fill="#FFFFFF" d="M151 145c0 28 47 50 105 50s105-22 105-50v-18l-105 42-105-42Z"/>
+    <path d="M471 112v86"/>
+    <path fill="#FFFFFF" d="M457 198h28v34h-28z"/>
+
+    <!-- Bus body -->
+    <rect x="79" y="211" width="354" height="319" rx="55" fill="#FFFFFF"/>
+    <path fill="#FFFFFF" d="M79 319h-20c-16 0-29 13-29 29v38c0 16 13 29 29 29h20"/>
+    <path fill="#FFFFFF" d="M433 319h20c16 0 29 13 29 29v38c0 16-13 29-29 29h-20"/>
+
+    <!-- Windshield -->
+    <path fill="#0E2A47" stroke="none" d="M139 285c0-9 8-17 18-18 31-4 64-6 99-6s68 2 99 6c10 1 18 9 18 18l-7 92c-1 11-10 19-21 20-29 3-59 5-89 5s-60-2-89-5c-11-1-20-10-21-20Z"/>
+
+    <!-- Headlights -->
+    <circle cx="181" cy="472" r="24" fill="#0E2A47" stroke="none"/>
+    <circle cx="331" cy="472" r="24" fill="#0E2A47" stroke="none"/>
+
+    <!-- Wheels -->
+    <path fill="#FFFFFF" d="M128 530h66v32h-66zM318 530h66v32h-66z"/>
+  </g>
+</svg>
