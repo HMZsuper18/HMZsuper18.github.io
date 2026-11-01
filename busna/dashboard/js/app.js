@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261101r';
+import * as api from './api.js?v=20261101s';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -28,6 +28,7 @@ const state = {
     inspectors: { search: '', governorate: '', minCompliance: '' },
   },
   earningsRange: 'day',
+  statsRange: 'day',
   earnings: [],
   charts: { earnings: null, bookings: null },
   subscriptions: [],
@@ -514,12 +515,15 @@ const STAT_LABELS = [
   ['total_inspectors', 'المفتشون'],
   ['total_routes', 'المسارات'],
   ['active_routes', 'المسارات الفعّالة'],
-  ['today_bookings', 'حجوزات اليوم'],
   ['upcoming_bookings', 'حجوزات قادمة'],
-  ['completed_today', 'صعود اليوم'],
-  ['cancelled_today', 'إلغاءات اليوم'],
-  ['no_shows_30d', 'غياب ٣٠ يوم'],
 ];
+
+const STAT_RANGE_LABELS = {
+  day: 'اليوم',
+  week: 'الأسبوع',
+  month: 'الشهر',
+  year: 'السنة',
+};
 
 async function loadOverview(trigger = null) {
   const errorBox = $('#overview-error');
@@ -528,7 +532,7 @@ async function loadOverview(trigger = null) {
   return withBusy(trigger, async () => {
     const [statsRes, bookingsRes, summaryRes, earningsRes, collectionsRes] =
       await Promise.allSettled([
-        api.fetchStats(),
+        api.fetchStats(state.statsRange),
         api.fetchRecentBookings(),
         api.fetchDashboardSummary(),
         api.fetchEarnings(state.earningsRange),
@@ -576,6 +580,24 @@ async function loadOverview(trigger = null) {
   });
 }
 
+async function refreshStats(trigger = null) {
+  const errorBox = $('#overview-error');
+  errorBox.classList.add('hidden');
+
+  return withBusy(trigger, async () => {
+    try {
+      const [stats, summary] = await Promise.all([
+        api.fetchStats(state.statsRange),
+        api.fetchDashboardSummary(),
+      ]);
+      renderStats(stats, summary);
+    } catch (error) {
+      errorBox.textContent = `الإحصائيات: ${error.message}`;
+      errorBox.classList.remove('hidden');
+    }
+  });
+}
+
 function money(value) {
   return `${num.format(Number(value || 0))} ج.م`;
 }
@@ -587,7 +609,15 @@ function renderStats(stats, summary = {}) {
     return;
   }
 
-  const cards = STAT_LABELS.map(
+  const rangeLabel = STAT_RANGE_LABELS[state.statsRange] || STAT_RANGE_LABELS.day;
+  const periodLabels = [
+    ['range_bookings', `حجوزات ${rangeLabel}`],
+    ['range_completed', `صعود ${rangeLabel}`],
+    ['range_cancelled', `إلغاءات ${rangeLabel}`],
+    ['range_no_shows', `غياب ${rangeLabel}`],
+  ];
+
+  const cards = [...STAT_LABELS, ...periodLabels].map(
     ([key, label]) => `
       <div class="stat">
         <span class="stat-value">${num.format(Number(stats[key] ?? 0))}</span>
@@ -598,18 +628,8 @@ function renderStats(stats, summary = {}) {
   cards.push(
     `
     <div class="stat stat-wide">
-      <span class="stat-value">${money(summary.today_revenue)}</span>
-      <span class="stat-label">أرباح اليوم</span>
-    </div>`,
-    `
-    <div class="stat">
-      <span class="stat-value">${money(summary.week_revenue)}</span>
-      <span class="stat-label">أرباح الأسبوع</span>
-    </div>`,
-    `
-    <div class="stat">
-      <span class="stat-value">${money(summary.month_revenue)}</span>
-      <span class="stat-label">أرباح الشهر</span>
+      <span class="stat-value">${money(stats.range_revenue)}</span>
+      <span class="stat-label">أرباح ${rangeLabel}</span>
     </div>`,
     `
     <div class="stat">
@@ -3327,6 +3347,15 @@ function bindStatic() {
   window.addEventListener('hashchange', () => showView(currentView()));
 
   $('#btn-refresh-overview').addEventListener('click', (event) => loadOverview(event.currentTarget));
+  $('#stats-range').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-range]');
+    if (!button) return;
+    state.statsRange = button.dataset.range;
+    $$('#stats-range .segment').forEach((item) =>
+      item.classList.toggle('is-active', item === button),
+    );
+    refreshStats(button);
+  });
   $('#btn-refresh-users').addEventListener('click', (event) => loadUsers(event.currentTarget));
   $('#btn-refresh-support').addEventListener('click', (event) => loadSupport(event.currentTarget));
   $('#btn-refresh-tools').addEventListener('click', (event) => loadTools(event.currentTarget));

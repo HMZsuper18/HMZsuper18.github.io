@@ -1990,3 +1990,25 @@ td.row-actions {
 td.row-actions .btn + .btn {
   margin-inline-start: 8px;
 }
+
+/* Overview period selector */
+.overview-controls {
+  align-items: center;
+}
+
+.overview-controls .segmented {
+  margin-bottom: 0;
+  min-width: 320px;
+}
+
+@media (max-width: 700px) {
+  .overview-controls {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .overview-controls .segmented {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+}

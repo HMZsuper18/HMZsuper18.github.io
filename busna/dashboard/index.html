@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>باصنا | لوحة التحكم</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="stylesheet" href="css/app.css?v=20261101r">
+  <link rel="stylesheet" href="css/app.css?v=20261101s">
 </head>
 <body>
 
@@ -139,9 +139,17 @@
         <header class="view-head">
           <div>
             <h1>نظرة عامة</h1>
-            <p class="muted">لمحة سريعة عن نشاط التطبيق اليوم.</p>
+            <p class="muted">لمحة سريعة عن نشاط التطبيق حسب الفترة المحددة.</p>
           </div>
-          <button id="btn-refresh-overview" class="btn btn-ghost" type="button">تحديث</button>
+          <div class="row-actions overview-controls">
+            <div class="segmented segmented-4" id="stats-range" role="tablist">
+              <button type="button" class="segment is-active" data-range="day">يومي</button>
+              <button type="button" class="segment" data-range="week">أسبوعي</button>
+              <button type="button" class="segment" data-range="month">شهري</button>
+              <button type="button" class="segment" data-range="year">سنوي</button>
+            </div>
+            <button id="btn-refresh-overview" class="btn btn-ghost" type="button">تحديث</button>
+          </div>
         </header>
         <div id="overview-error" class="banner banner-danger hidden"></div>
         <div id="stat-grid" class="stat-grid"></div>
@@ -983,6 +991,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="js/vendor/chart.umd.min.js?v=20261031b"></script>
-  <script type="module" src="js/app.js?v=20261101r"></script>
+  <script type="module" src="js/app.js?v=20261101s"></script>
 </body>
 </html>

@@ -100,8 +100,10 @@ export async function signOut() {
 
 // ---------------------------------------------------------------- overview --
 
-export async function fetchStats() {
-  const { data, error } = await supabase.rpc('admin_dashboard_stats');
+export async function fetchStats(range = 'day') {
+  const { data, error } = await supabase.rpc('admin_dashboard_stats', {
+    p_range: range,
+  });
   if (error) throw new Error(mapError(error));
   return data?.[0] || null;
 }
