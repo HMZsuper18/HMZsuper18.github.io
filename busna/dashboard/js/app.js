@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261101i';
+import * as api from './api.js?v=20261101j';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -40,9 +40,278 @@ const state = {
   notifTimer: null,
 };
 
+// ------------------------------------------------------- custom select UI --
+
+const customSelectState = {
+  popup: null,
+  list: null,
+  openSelect: null,
+  openTrigger: null,
+};
+
+const nativeSelectValue = Object.getOwnPropertyDescriptor(
+  HTMLSelectElement.prototype,
+  'value',
+);
+
+Object.defineProperty(HTMLSelectElement.prototype, 'value', {
+  configurable: true,
+  enumerable: nativeSelectValue.enumerable,
+  get() {
+    return nativeSelectValue.get.call(this);
+  },
+  set(value) {
+    nativeSelectValue.set.call(this, value);
+    if (typeof this._syncCustomSelect === 'function') this._syncCustomSelect();
+  },
+});
+
+function customSelectPopup() {
+  if (!customSelectState.popup) {
+    const popup = document.createElement('div');
+    popup.className = 'custom-select-popup';
+    popup.dataset.open = 'false';
+    const list = document.createElement('ul');
+    list.className = 'custom-select-list';
+    list.setAttribute('role', 'listbox');
+    popup.appendChild(list);
+    document.body.appendChild(popup);
+    customSelectState.popup = popup;
+    customSelectState.list = list;
+  }
+  return customSelectState.popup;
+}
+
+function closeCustomSelect() {
+  if (customSelectState.popup) {
+    customSelectState.popup.dataset.open = 'false';
+  }
+  if (customSelectState.openTrigger) {
+    customSelectState.openTrigger.setAttribute('aria-expanded', 'false');
+  }
+  customSelectState.openSelect = null;
+  customSelectState.openTrigger = null;
+}
+
+function renderCustomSelectOptions(select) {
+  const list = customSelectState.list;
+  if (!list) return;
+  list.innerHTML = '';
+  Array.from(select.options).forEach((option, index) => {
+    const item = document.createElement('li');
+    item.className = 'custom-select-option';
+    item.setAttribute('role', 'option');
+    item.setAttribute('tabindex', '-1');
+    item.setAttribute(
+      'aria-selected',
+      index === select.selectedIndex ? 'true' : 'false',
+    );
+    if (option.disabled) item.setAttribute('aria-disabled', 'true');
+    item.textContent = option.textContent;
+    item.addEventListener('click', () => {
+      if (option.disabled) return;
+      select.value = option.value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      closeCustomSelect();
+    });
+    item.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        item.click();
+      } else if (event.key === 'Escape') {
+        const trigger = customSelectState.openTrigger;
+        closeCustomSelect();
+        trigger?.focus();
+      }
+    });
+    list.appendChild(item);
+  });
+
+  const popup = customSelectState.popup;
+  const selected = list.children[select.selectedIndex];
+  if (popup && selected) {
+    popup.scrollTop = Math.max(
+      0,
+      selected.offsetTop - popup.clientHeight / 2 + selected.offsetHeight / 2,
+    );
+  }
+}
+
+function positionCustomSelect(trigger) {
+  const popup = customSelectState.popup;
+  const rect = trigger.getBoundingClientRect();
+  const margin = 8;
+  const gap = 4;
+  const width = Math.max(rect.width, 180);
+  const spaceBelow = window.innerHeight - rect.bottom - gap - margin;
+  const spaceAbove = rect.top - gap - margin;
+  const openAbove = spaceBelow < 170 && spaceAbove > spaceBelow;
+  const left = Math.max(
+    margin,
+    Math.min(rect.right - width, window.innerWidth - width - margin),
+  );
+
+  popup.style.width = `${Math.min(width, window.innerWidth - margin * 2)}px`;
+  popup.style.left = `${left}px`;
+  popup.style.maxHeight = `${Math.min(300, Math.max(140, openAbove ? spaceAbove : spaceBelow))}px`;
+
+  if (openAbove) {
+    popup.style.top = 'auto';
+    popup.style.bottom = `${window.innerHeight - rect.top + gap}px`;
+  } else {
+    popup.style.top = `${rect.bottom + gap}px`;
+    popup.style.bottom = 'auto';
+  }
+}
+
+function openCustomSelect(select, trigger, render) {
+  const popup = customSelectPopup();
+  if (customSelectState.openSelect === select && popup.dataset.open === 'true') {
+    closeCustomSelect();
+    return;
+  }
+  closeCustomSelect();
+  const host = trigger.closest('dialog[open]') || document.body;
+  if (popup.parentNode !== host) host.appendChild(popup);
+  customSelectState.openSelect = select;
+  customSelectState.openTrigger = trigger;
+  trigger.setAttribute('aria-expanded', 'true');
+  render();
+  positionCustomSelect(trigger);
+  popup.dataset.open = 'true';
+}
+
+function enhanceCustomSelect(select) {
+  if (!select || select.dataset.customSelect === 'true' || select.multiple) {
+    return;
+  }
+  select.dataset.customSelect = 'true';
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'custom-select';
+  select.parentNode.insertBefore(wrapper, select);
+  wrapper.appendChild(select);
+  select.classList.add('custom-select-native');
+  select.setAttribute('tabindex', '-1');
+
+  const trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = 'custom-select-trigger';
+  trigger.setAttribute('aria-haspopup', 'listbox');
+  trigger.setAttribute('aria-expanded', 'false');
+  const valueLabel = document.createElement('span');
+  valueLabel.className = 'custom-select-value';
+  trigger.appendChild(valueLabel);
+  wrapper.appendChild(trigger);
+
+  const sync = () => {
+    const option = select.options[select.selectedIndex];
+    valueLabel.textContent = option ? option.textContent : '—';
+    trigger.disabled = select.disabled;
+    trigger.classList.toggle('is-placeholder', !select.value);
+    if (customSelectState.openSelect === select) {
+      renderCustomSelectOptions(select);
+      if (customSelectState.openTrigger) {
+        positionCustomSelect(customSelectState.openTrigger);
+      }
+    }
+  };
+
+  trigger.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openCustomSelect(select, trigger, () =>
+      renderCustomSelectOptions(select),
+    );
+  });
+
+  trigger.addEventListener('keydown', (event) => {
+    if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
+      event.preventDefault();
+      openCustomSelect(select, trigger, () =>
+        renderCustomSelectOptions(select),
+      );
+      const items = Array.from(customSelectState.list.children).filter(
+        (item) => item.getAttribute('aria-disabled') !== 'true',
+      );
+      const target = items[select.selectedIndex] || items[0];
+      target?.focus();
+    } else if (event.key === 'Escape') {
+      closeCustomSelect();
+    }
+  });
+
+  select.addEventListener('change', sync);
+  select._syncCustomSelect = sync;
+
+  const observer = new MutationObserver(sync);
+  observer.observe(select, { childList: true });
+
+  sync();
+}
+
+function initCustomSelects() {
+  document.querySelectorAll('select').forEach(enhanceCustomSelect);
+
+  // A form.reset() reverts selectedIndex without touching `.value`, so refresh
+  // the custom labels on the next microtask (after the default reset action).
+  document.addEventListener(
+    'reset',
+    (event) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) return;
+      queueMicrotask(() => {
+        form
+          .querySelectorAll('select')
+          .forEach((select) => select._syncCustomSelect?.());
+      });
+    },
+    true,
+  );
+
+  document.addEventListener('click', (event) => {
+    if (!customSelectState.openSelect) return;
+    if (
+      event.target.closest('.custom-select-popup') ||
+      event.target.closest('.custom-select-trigger')
+    ) {
+      return;
+    }
+    closeCustomSelect();
+  });
+
+  window.addEventListener(
+    'scroll',
+    (event) => {
+      if (event.target === customSelectState.popup) return;
+      closeCustomSelect();
+    },
+    true,
+  );
+  window.addEventListener('resize', closeCustomSelect);
+
+  const bodyObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType !== 1) return;
+        if (node.tagName === 'SELECT') enhanceCustomSelect(node);
+        node.querySelectorAll?.('select').forEach(enhanceCustomSelect);
+      });
+    }
+    if (
+      customSelectState.openSelect &&
+      !document.body.contains(customSelectState.openSelect)
+    ) {
+      closeCustomSelect();
+    }
+  });
+  bodyObserver.observe(document.body, { childList: true, subtree: true });
+}
+
 // ------------------------------------------------------------------ boot --
 
 async function boot() {
+  initCustomSelects();
   bindStatic();
   consumeOAuthError();
 
