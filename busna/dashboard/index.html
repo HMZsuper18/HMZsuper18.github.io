@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>باصنا | لوحة التحكم</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="stylesheet" href="css/app.css?v=20261101l">
+  <link rel="stylesheet" href="css/app.css?v=20261101m">
 </head>
 <body>
 
@@ -618,6 +618,7 @@
             <option value="bus">باص</option>
             <option value="microbus">ميكروباص</option>
             <option value="minibus">ميني باص</option>
+            <option value="tamnaya">تمناية</option>
           </select>
         </label>
         <label class="field">
@@ -625,16 +626,21 @@
           <select name="capacity" id="vehicle-capacity" required></select>
         </label>
         <label class="field">
-          <span>رقم اللوحة (مطلوب)</span>
-          <input name="plate" type="text" required maxlength="20"
-                 placeholder="مثال: 1234 ABC" autocomplete="off" dir="ltr">
+          <span>حروف اللوحة (عربية 2-3)</span>
+          <input name="plate_letters" type="text" required maxlength="5"
+                 placeholder="أ ب ج" autocomplete="off" dir="rtl">
         </label>
         <label class="field">
-          <span>الوصف (اختياري)</span>
-          <input name="description" type="text" maxlength="80"
-                 placeholder="مثال: باص أحمد" autocomplete="off">
+          <span>أرقام اللوحة (1-4 أرقام)</span>
+          <input name="plate_numbers" type="text" required maxlength="4"
+                 inputmode="numeric" placeholder="1234" autocomplete="off" dir="ltr">
         </label>
       </div>
+      <label class="field field-full">
+        <span>الوصف (اختياري)</span>
+        <input name="description" type="text" maxlength="80"
+               placeholder="مثال: باص أحمد" autocomplete="off">
+      </label>
       <div class="field field-full">
         <span>مخطط المقاعد</span>
         <div id="vehicle-seat-preview" class="seat-preview" aria-live="polite"></div>
@@ -750,6 +756,7 @@
             <option value="bus">باص</option>
             <option value="microbus">ميكروباص</option>
             <option value="minibus">ميني باص</option>
+            <option value="tamnaya">تمناية</option>
           </select>
         </label>
         <label class="field">
@@ -976,6 +983,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="js/vendor/chart.umd.min.js?v=20261031b"></script>
-  <script type="module" src="js/app.js?v=20261101l"></script>
+  <script type="module" src="js/app.js?v=20261101m"></script>
 </body>
 </html>

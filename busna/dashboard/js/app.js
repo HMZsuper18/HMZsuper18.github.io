@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261101l';
+import * as api from './api.js?v=20261101m';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -873,12 +873,29 @@ const SEAT_PRESETS = {
     { seats: 22, label: '22 مقعد — 2 + 4×5' },
     { seats: 26, label: '26 مقعد — 2 + 4×6' },
   ],
+  tamnaya: [
+    { seats: 7, label: '7 مقاعد — 2 + 2 + 3' },
+  ],
 };
 
 function vehicleLabel(value) {
   if (value === 'microbus') return 'ميكروباص';
   if (value === 'minibus') return 'ميني باص';
+  if (value === 'tamnaya') return 'تمناية';
   return 'باص';
+}
+
+function vehiclePlateLabel(vehicle) {
+  const letters = String(vehicle.plate_letters || '').trim();
+  const numbers = vehicle.plate_numbers;
+  return `${letters}${numbers == null ? '' : ` ${numbers}`}`.trim() || '—';
+}
+
+function normalizePlateDigits(value) {
+  return String(value || '')
+    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0))
+    .replace(/[^0-9]/g, '');
 }
 
 function populateSeatOptions(vehicle, preferred = null) {
@@ -1212,7 +1229,7 @@ function routeVehicleType() {
 function vehicleOptionLabel(vehicle) {
   return `#${vehicle.id} — ${vehicleLabel(vehicle.vehicle_type)} · ${num.format(
     Number(vehicle.capacity) || 0,
-  )} مقعد · ${escapeHtml(vehicle.plate || '')}`;
+  )} مقعد · ${escapeHtml(vehiclePlateLabel(vehicle))}`;
 }
 
 function renderVehiclePicker() {
@@ -1227,7 +1244,7 @@ function renderVehiclePicker() {
     if (vehicle.vehicle_type !== type) return false;
     if (!query) return true;
     const haystack =
-      `${vehicle.id} ${vehicle.capacity} ${vehicle.plate || ''} ${vehicle.description || ''}`.toLowerCase();
+      `${vehicle.id} ${vehicle.capacity} ${vehicle.plate_letters || ''} ${vehicle.plate_numbers || ''} ${vehicle.description || ''}`.toLowerCase();
     return haystack.includes(query);
   });
 
@@ -1368,6 +1385,30 @@ function buildSeatRows(vehicle, total) {
         ]);
         remaining -= 4;
       }
+    }
+    return rows;
+  }
+
+  if (vehicle === 'tamnaya') {
+    const front = total >= 2 ? 2 : total;
+    if (front > 0) {
+      rows.push(
+        Array.from({ length: front }, () => ({
+          seat: seat++,
+          kind: 'window',
+        })),
+      );
+    }
+    let remaining = total - front;
+    while (remaining > 0) {
+      const count = remaining > 3 ? 2 : remaining;
+      rows.push(
+        Array.from({ length: count }, (_, index) => ({
+          seat: seat++,
+          kind: benchSeatKind(index, count),
+        })),
+      );
+      remaining -= count;
     }
     return rows;
   }
@@ -1894,7 +1935,7 @@ function renderVehicles() {
       <tr>
         <td><code>#${vehicle.id}</code></td>
         <td><span class="badge badge-neutral">${vehicleLabel(vehicle.vehicle_type)}</span></td>
-        <td><code>${escapeHtml(vehicle.plate || '—')}</code></td>
+        <td><code>${escapeHtml(vehiclePlateLabel(vehicle))}</code></td>
         <td>${escapeHtml(vehicle.description || '—')}</td>
         <td>${num.format(Number(vehicle.capacity) || 0)}</td>
         <td>
@@ -1931,7 +1972,8 @@ function openVehicleDialog(vehicle = null) {
   if (vehicle) {
     form.vehicle_type.value = vehicle.vehicle_type;
     populateVehicleCapacity(vehicle.vehicle_type, vehicle.capacity);
-    form.plate.value = vehicle.plate || '';
+    form.plate_letters.value = vehicle.plate_letters || '';
+    form.plate_numbers.value = vehicle.plate_numbers ?? '';
     form.description.value = vehicle.description || '';
     form.is_active.checked = Boolean(vehicle.is_active);
   } else {
@@ -1948,10 +1990,24 @@ async function saveVehicle(event) {
   const form = event.currentTarget;
   const button = $('#btn-save-vehicle');
   setFormError('vehicle', null);
+
+  const letters = form.plate_letters.value.trim().replace(/\s+/g, ' ');
+  if (!/^[\u0621-\u064A]( ?[\u0621-\u064A]){1,2}$/.test(letters)) {
+    setFormError('vehicle', 'حروف اللوحة يجب أن تكون حرفين أو ثلاثة حروف عربية.');
+    return;
+  }
+  const digits = normalizePlateDigits(form.plate_numbers.value);
+  const numbers = Number(digits);
+  if (!digits || numbers < 1 || numbers > 9999) {
+    setFormError('vehicle', 'أرقام اللوحة يجب أن تكون من 1 إلى 4 أرقام.');
+    return;
+  }
+
   const payload = {
     vehicle_type: form.vehicle_type.value,
     capacity: Number(form.capacity.value),
-    plate: form.plate.value.trim(),
+    plate_letters: letters,
+    plate_numbers: numbers,
     description: form.description.value.trim() || null,
     is_active: form.is_active.checked,
   };

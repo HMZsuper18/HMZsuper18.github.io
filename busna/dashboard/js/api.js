@@ -170,7 +170,7 @@ export async function deleteRoute(id) {
 export async function fetchVehicles() {
   const { data, error } = await supabase
     .from('vehicles')
-    .select('id, vehicle_type, plate, description, capacity, is_active, created_at')
+    .select('id, vehicle_type, plate_letters, plate_numbers, description, capacity, is_active, created_at')
     .order('id');
   if (error) throw new Error(mapError(error));
   return data || [];
