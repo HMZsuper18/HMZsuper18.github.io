@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261101e';
+import * as api from './api.js?v=20261101f';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -9,9 +9,13 @@ const state = {
   routes: [],
   stations: [],
   governorates: [],
+  vehicles: [],
+  routeInspectors: [],
+  routeLookupsLoaded: false,
   stationFilters: { search: '', governorate: '' },
   stationEditingId: null,
   governorateEditingCode: null,
+  vehicleEditingId: null,
   inspectors: [],
   users: [],
   support: [],
@@ -79,7 +83,7 @@ function allowedViews(session) {
   const views = [];
   if (session.canViewOverview) {
     // Analysts see every screen, just read-only.
-    views.push('overview', 'routes', 'stations', 'inspectors', 'users');
+    views.push('overview', 'routes', 'stations', 'vehicles', 'inspectors', 'users');
   }
   if (session.canManage) views.push('feedback', 'subscriptions');
   if (session.canUseTools) views.push('tools');
@@ -113,6 +117,7 @@ function renderGate(session) {
   $('#btn-add-route').classList.toggle('hidden', !session.canManage);
   $('#btn-add-station').classList.toggle('hidden', !session.canManage);
   $('#btn-add-governorate').classList.toggle('hidden', !session.canManage);
+  $('#btn-add-vehicle').classList.toggle('hidden', !session.canManage);
   $('#btn-add-inspector').classList.toggle('hidden', !session.canManage);
   $('#users-hint').textContent = session.canEditUsers
     ? session.canAssignAdmin
@@ -165,6 +170,7 @@ const VIEWS = [
   'overview',
   'routes',
   'stations',
+  'vehicles',
   'inspectors',
   'feedback',
   'subscriptions',
@@ -191,6 +197,7 @@ function showView(name) {
   if (target === 'overview') loadOverview();
   if (target === 'routes') loadRoutes();
   if (target === 'stations') loadStations();
+  if (target === 'vehicles') loadVehicles();
   if (target === 'inspectors') loadInspectors();
   if (target === 'feedback') loadSupport();
   if (target === 'subscriptions') loadSubscriptions();
@@ -750,6 +757,7 @@ function writeGraph(data) {
   refreshTripSelectors();
   updateTripCostPreview();
   updateSeatPreview();
+  updateRouteCode();
 }
 
 function resolveStationId(stop) {
@@ -889,11 +897,87 @@ function collectRouteStops() {
     if (index > 0) cumulative += Math.max(0, Number(data.edges[index - 1]) || 0);
     return {
       station_id: node.station.id,
+      code: node.station.code,
       name: node.station.name,
       governorate: node.station.governorate,
       price: cumulative,
     };
   });
+}
+
+function updateRouteCode() {
+  const form = $('#route-form');
+  if (!form) return;
+  const data = readGraph();
+  const codes = data.nodes.map((node) => {
+    const station = state.stations.find(
+      (item) => String(item.id) === String(node.stationId),
+    );
+    return station?.code ? String(station.code).toUpperCase() : '';
+  });
+  form.code.value = codes.every(Boolean) ? codes.join('-') : '';
+}
+
+async function ensureRouteLookups(force = false) {
+  if (!force && state.routeLookupsLoaded) return;
+  const [vehicles, inspectors] = await Promise.all([
+    api.fetchVehicles(),
+    api.fetchInspectors(),
+  ]);
+  state.vehicles = vehicles;
+  state.routeInspectors = inspectors.rows || [];
+  state.routeLookupsLoaded = true;
+  populateRouteVehicleSelect();
+  populateRouteInspectorSelect();
+}
+
+function populateRouteVehicleSelect(selectedId = null) {
+  const select = $('#route-vehicle');
+  if (!select) return;
+  const current = selectedId ?? select.value;
+  const options = state.vehicles
+    .filter((vehicle) => vehicle.is_active || String(vehicle.id) === String(current))
+    .map(
+      (vehicle) =>
+        `<option value="${vehicle.id}">#${vehicle.id} — ${vehicleLabel(
+          vehicle.vehicle_type,
+        )} · ${num.format(Number(vehicle.capacity) || 0)} مقعد${
+          vehicle.label ? ` · ${escapeHtml(vehicle.label)}` : ''
+        }</option>`,
+    )
+    .join('');
+  select.innerHTML = `<option value="">بدون مركبة محددة</option>${options}`;
+  select.value = current && select.querySelector(`option[value="${current}"]`) ? String(current) : '';
+}
+
+function populateRouteInspectorSelect(selectedId = null) {
+  const select = $('#route-inspector');
+  if (!select) return;
+  const current = selectedId ?? select.value;
+  const options = state.routeInspectors
+    .filter((inspector) => inspector.is_active || String(inspector.id) === String(current))
+    .map(
+      (inspector) =>
+        `<option value="${inspector.id}">${escapeHtml(
+          inspector.full_name || inspector.email,
+        )}</option>`,
+    )
+    .join('');
+  select.innerHTML = `<option value="">بدون مفتش</option>${options}`;
+  select.value = current && select.querySelector(`option[value="${current}"]`) ? String(current) : '';
+}
+
+// Selecting a fleet vehicle copies its type and capacity onto the route.
+// The database trigger enforces the same rule on save.
+function applyVehicleToRouteForm() {
+  const form = $('#route-form');
+  const select = $('#route-vehicle');
+  if (!form || !select) return;
+  const vehicle = state.vehicles.find((item) => String(item.id) === String(select.value));
+  if (!vehicle) return;
+  form.vehicle_type.value = vehicle.vehicle_type;
+  populateSeatOptions(vehicle.vehicle_type, vehicle.capacity);
+  updateSeatPreview();
 }
 
 function buildSeatRows(vehicle, total) {
@@ -1061,7 +1145,7 @@ async function openRouteDialog(route = null) {
   state.routeEditingId = route?.id ?? null;
 
   try {
-    await ensureStations();
+    await Promise.all([ensureStations(), ensureRouteLookups(true)]);
   } catch (error) {
     setFormError('route', error.message);
     return;
@@ -1072,11 +1156,12 @@ async function openRouteDialog(route = null) {
 
   let stops = [];
   if (route) {
-    form.code.value = route.code;
     form.move_time.value = formatTime(route.move_time);
     form.vehicle_type.value = route.vehicle_type || 'bus';
     populateSeatOptions(form.vehicle_type.value, route.seats);
     form.is_active.checked = Boolean(route.is_active);
+    populateRouteVehicleSelect(route.vehicle_id ?? '');
+    populateRouteInspectorSelect(route.inspector_id ?? '');
     try {
       stops = await api.fetchRouteStops(route.id);
     } catch (_) {
@@ -1086,10 +1171,30 @@ async function openRouteDialog(route = null) {
     form.is_active.checked = true;
     form.vehicle_type.value = 'bus';
     populateSeatOptions('bus', 14);
+    populateRouteVehicleSelect('');
+    populateRouteInspectorSelect('');
   }
 
   renderRouteGraph(stops);
   $('#route-dialog').showModal();
+}
+
+async function uniqueRouteCode(baseCode, editingId = null) {
+  const base = String(baseCode || 'ROUT').toUpperCase();
+  try {
+    const { rows } = await api.fetchRoutes();
+    const taken = new Set(
+      rows
+        .filter((route) => String(route.id) !== String(editingId))
+        .map((route) => String(route.code).toUpperCase()),
+    );
+    if (!taken.has(base)) return base;
+    let suffix = 2;
+    while (taken.has(`${base}-${suffix}`)) suffix += 1;
+    return `${base}-${suffix}`;
+  } catch (_) {
+    return base;
+  }
 }
 
 async function saveRoute(event) {
@@ -1107,14 +1212,20 @@ async function saveRoute(event) {
   }
 
   const last = stops[stops.length - 1];
+  const baseCode = stops.map((stop) => stop.code).join('-');
+  const code = await uniqueRouteCode(baseCode, state.routeEditingId);
+  form.code.value = code;
+
   const payload = {
-    code: form.code.value.trim().toUpperCase(),
+    code,
     price: last.price,
     origin: stops[0].name,
     destination: last.name,
     move_time: form.move_time.value,
     seats: Number(form.seats.value),
     vehicle_type: form.vehicle_type.value,
+    vehicle_id: form.vehicle_id.value ? Number(form.vehicle_id.value) : null,
+    inspector_id: form.inspector_id.value || null,
     is_active: form.is_active.checked,
   };
 
@@ -1368,6 +1479,153 @@ async function saveGovernorate(event) {
     setFormError('governorate', error.message);
   } finally {
     button.disabled = false;
+  }
+}
+
+// --------------------------------------------------------------- vehicles --
+
+function populateVehicleCapacity(vehicle, preferred = null) {
+  const select = $('#vehicle-capacity');
+  if (!select) return;
+  const presets = SEAT_PRESETS[vehicle] || SEAT_PRESETS.bus;
+  const current = Number(preferred);
+  const options = presets.slice();
+  if (
+    Number.isInteger(current) &&
+    current > 0 &&
+    !options.some((option) => option.seats === current)
+  ) {
+    options.push({ seats: current, label: `${current} مقعد — الحالي` });
+  }
+  options.sort((a, b) => a.seats - b.seats);
+  select.innerHTML = options
+    .map((option) => `<option value="${option.seats}">${option.label}</option>`)
+    .join('');
+  select.value = String(
+    options.some((option) => option.seats === current) ? current : presets[0].seats,
+  );
+}
+
+async function loadVehicles(trigger = null) {
+  const errorBox = $('#vehicles-error');
+  errorBox.classList.add('hidden');
+
+  return withBusy(trigger, async () => {
+    try {
+      state.vehicles = await api.fetchVehicles();
+      state.routeLookupsLoaded = false;
+      renderVehicles();
+    } catch (error) {
+      errorBox.textContent = error.message;
+      errorBox.classList.remove('hidden');
+    }
+  });
+}
+
+function renderVehicles() {
+  const body = $('#vehicles-body');
+  if (!body) return;
+  const canManage = Boolean(state.session?.canManage);
+
+  if (!state.vehicles.length) {
+    body.innerHTML = '<tr><td colspan="6" class="empty">لا توجد مركبات. أضف أول مركبة من الأعلى.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = state.vehicles
+    .map(
+      (vehicle) => `
+      <tr>
+        <td><code>#${vehicle.id}</code></td>
+        <td><span class="badge badge-neutral">${vehicleLabel(vehicle.vehicle_type)}</span></td>
+        <td>${escapeHtml(vehicle.label || '—')}</td>
+        <td>${num.format(Number(vehicle.capacity) || 0)}</td>
+        <td>
+          ${canManage
+            ? `<button class="badge ${vehicle.is_active ? 'badge-ok' : 'badge-off'}"
+                      data-toggle-vehicle="${vehicle.id}" type="button">
+                ${vehicle.is_active ? 'مفعّلة' : 'موقوفة'}
+              </button>`
+            : `<span class="badge ${vehicle.is_active ? 'badge-ok' : 'badge-off'}">
+                ${vehicle.is_active ? 'مفعّلة' : 'موقوفة'}
+              </span>`}
+        </td>
+        <td class="row-actions">
+          ${canManage
+            ? `<button class="btn btn-mini" data-edit-vehicle="${vehicle.id}" type="button">تعديل</button>
+               <button class="btn btn-mini btn-danger-ghost" data-delete-vehicle="${vehicle.id}" type="button">حذف</button>`
+            : '<span class="muted small">—</span>'}
+        </td>
+      </tr>`,
+    )
+    .join('');
+}
+
+function openVehicleDialog(vehicle = null) {
+  const form = $('#vehicle-form');
+  form.reset();
+  setFormError('vehicle', null);
+  state.vehicleEditingId = vehicle?.id ?? null;
+  $('#vehicle-dialog-title').textContent = vehicle
+    ? `تعديل المركبة #${vehicle.id}`
+    : 'مركبة جديدة';
+  $('#btn-save-vehicle').textContent = vehicle ? 'حفظ التعديلات' : 'إضافة المركبة';
+
+  if (vehicle) {
+    form.vehicle_type.value = vehicle.vehicle_type;
+    populateVehicleCapacity(vehicle.vehicle_type, vehicle.capacity);
+    form.label.value = vehicle.label || '';
+    form.is_active.checked = Boolean(vehicle.is_active);
+  } else {
+    form.vehicle_type.value = 'bus';
+    populateVehicleCapacity('bus');
+    form.is_active.checked = true;
+  }
+  $('#vehicle-dialog').showModal();
+}
+
+async function saveVehicle(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = $('#btn-save-vehicle');
+  setFormError('vehicle', null);
+  const payload = {
+    vehicle_type: form.vehicle_type.value,
+    capacity: Number(form.capacity.value),
+    label: form.label.value.trim() || null,
+    is_active: form.is_active.checked,
+  };
+  button.disabled = true;
+  try {
+    if (state.vehicleEditingId == null) await api.createVehicle(payload);
+    else await api.updateVehicle(state.vehicleEditingId, payload);
+    toast(state.vehicleEditingId == null ? 'تمت إضافة المركبة.' : 'تم حفظ المركبة.');
+    $('#vehicle-dialog').close();
+    await loadVehicles();
+  } catch (error) {
+    setFormError('vehicle', error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function toggleVehicle(id, isActive) {
+  try {
+    await api.updateVehicle(id, { is_active: isActive });
+    await loadVehicles();
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+async function removeVehicle(id) {
+  if (!window.confirm('حذف هذه المركبة؟ ستبقى مساراتها دون مركبة محددة.')) return;
+  try {
+    await api.deleteVehicle(id);
+    toast('تم حذف المركبة.');
+    await loadVehicles();
+  } catch (error) {
+    toast(error.message);
   }
 }
 
@@ -1799,7 +2057,8 @@ function renderUsers() {
           <td>${roleCell}</td>
           <td class="row-actions">
             ${editable
-              ? `<button class="btn btn-mini" data-save-role="${user.id}" type="button">حفظ الدور</button>`
+              ? `<button class="btn btn-mini" data-save-role="${user.id}" type="button">حفظ الدور</button>
+                 <button class="btn btn-mini btn-danger-ghost" data-delete-user="${user.id}" type="button">حذف</button>`
               : `<span class="muted small">${isSelf ? 'حسابك' : '—'}</span>`}
           </td>
         </tr>`;
@@ -1824,6 +2083,27 @@ async function saveUserRole(userId) {
     $('#users-error').classList.remove('hidden');
   } finally {
     if (button) button.disabled = false;
+  }
+}
+
+async function deleteUserAccount(userId) {
+  const user = state.people.users.find((item) => item.id === userId);
+  const label = user?.full_name || user?.email || 'هذا المستخدم';
+  if (
+    !window.confirm(
+      `حذف حساب ${label} نهائيًا؟ ستُحذف كل حجوزاته واشتراكاته وإشعاراته ولا يمكن التراجع.`,
+    )
+  ) {
+    return;
+  }
+
+  try {
+    await api.deleteUser(userId);
+    toast('تم حذف الحساب.');
+    await loadUsers();
+  } catch (error) {
+    $('#users-error').textContent = error.message;
+    $('#users-error').classList.remove('hidden');
   }
 }
 
@@ -2632,8 +2912,14 @@ function bindStatic() {
   $('#btn-add-route').addEventListener('click', () => openRouteDialog());
   $('#btn-add-inspector').addEventListener('click', () => openInspectorDialog());
   $('#btn-add-station').addEventListener('click', () => openStationDialog());
+  $('#btn-add-vehicle').addEventListener('click', () => openVehicleDialog());
   $('#btn-add-governorate').addEventListener('click', () => openGovernorateDialog());
   $('#route-form').addEventListener('submit', saveRoute);
+  $('#vehicle-form').addEventListener('submit', saveVehicle);
+  $('#vehicle-form').vehicle_type.addEventListener('change', () => {
+    populateVehicleCapacity($('#vehicle-form').vehicle_type.value);
+  });
+  $('#route-vehicle').addEventListener('change', applyVehicleToRouteForm);
   $('#station-form').addEventListener('submit', saveStation);
   $('#governorate-form').addEventListener('submit', saveGovernorate);
   $('#inspector-form').addEventListener('submit', saveInspector);
@@ -2777,6 +3063,29 @@ function bindStatic() {
     }
   });
 
+  $('#vehicles-body').addEventListener('click', async (event) => {
+    const edit = event.target.closest('[data-edit-vehicle]');
+    const remove = event.target.closest('[data-delete-vehicle]');
+    const toggle = event.target.closest('[data-toggle-vehicle]');
+
+    if (edit) {
+      const vehicle = state.vehicles.find((item) => String(item.id) === edit.dataset.editVehicle);
+      if (vehicle) openVehicleDialog(vehicle);
+      return;
+    }
+
+    if (remove) {
+      const vehicle = state.vehicles.find((item) => String(item.id) === remove.dataset.deleteVehicle);
+      if (vehicle) removeVehicle(vehicle.id);
+      return;
+    }
+
+    if (toggle) {
+      const vehicle = state.vehicles.find((item) => String(item.id) === toggle.dataset.toggleVehicle);
+      if (vehicle) toggleVehicle(vehicle.id, !vehicle.is_active);
+    }
+  });
+
   $('#governorates-body').addEventListener('click', async (event) => {
     const edit = event.target.closest('[data-edit-governorate]');
     const remove = event.target.closest('[data-delete-governorate]');
@@ -2892,6 +3201,8 @@ function bindStatic() {
   $('#users-body').addEventListener('click', (event) => {
     const save = event.target.closest('[data-save-role]');
     if (save) saveUserRole(save.dataset.saveRole);
+    const remove = event.target.closest('[data-delete-user]');
+    if (remove) deleteUserAccount(remove.dataset.deleteUser);
     const person = event.target.closest('[data-person]');
     if (person) openPersonBookings(person.dataset.person);
   });

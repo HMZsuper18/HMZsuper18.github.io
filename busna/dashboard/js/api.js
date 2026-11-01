@@ -122,7 +122,7 @@ export async function fetchRecentBookings(limit = 12) {
 // ------------------------------------------------------------------ routes --
 
 const ROUTE_COLUMNS =
-  'id, code, price, origin, destination, seats, move_time, is_active, vehicle_type';
+  'id, code, price, origin, destination, seats, move_time, is_active, vehicle_type, vehicle_id, inspector_id';
 
 export async function fetchRoutes() {
   const [result, countResult] = await Promise.all([
@@ -162,6 +162,43 @@ export async function setRouteActive(id, isActive) {
 
 export async function deleteRoute(id) {
   const { error } = await supabase.from('routes').delete().eq('id', id);
+  if (error) throw new Error(mapError(error));
+}
+
+// ---------------------------------------------------------------- vehicles --
+
+export async function fetchVehicles() {
+  const { data, error } = await supabase
+    .from('vehicles')
+    .select('id, vehicle_type, label, capacity, is_active, created_at')
+    .order('id');
+  if (error) throw new Error(mapError(error));
+  return data || [];
+}
+
+export async function createVehicle(payload) {
+  const { data, error } = await supabase
+    .from('vehicles')
+    .insert(payload)
+    .select('*')
+    .single();
+  if (error) throw new Error(mapError(error));
+  return data;
+}
+
+export async function updateVehicle(id, payload) {
+  const { data, error } = await supabase
+    .from('vehicles')
+    .update(payload)
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw new Error(mapError(error));
+  return data;
+}
+
+export async function deleteVehicle(id) {
+  const { error } = await supabase.from('vehicles').delete().eq('id', id);
   if (error) throw new Error(mapError(error));
 }
 
@@ -339,6 +376,14 @@ export async function setUserRole(userId, role) {
   });
   if (error) throw new Error(mapError(error));
   return data?.[0] || null;
+}
+
+// Admins and super admins can remove an account outright (cascades).
+export async function deleteUser(userId) {
+  const { error } = await supabase.rpc('admin_delete_user', {
+    p_user_id: userId,
+  });
+  if (error) throw new Error(mapError(error));
 }
 
 // ------------------------------------------------------------------- tools --

@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>باصنا | لوحة التحكم</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="stylesheet" href="css/app.css?v=20261101e">
+  <link rel="stylesheet" href="css/app.css?v=20261101f">
 </head>
 <body>
 
@@ -75,6 +75,9 @@
         </button>
         <button class="nav-item" data-view="stations" type="button">
           <span class="nav-dot"></span> المحطات
+        </button>
+        <button class="nav-item" data-view="vehicles" type="button">
+          <span class="nav-dot"></span> المركبات
         </button>
         <button class="nav-item" data-view="inspectors" type="button">
           <span class="nav-dot"></span> المفتشون
@@ -227,6 +230,35 @@
             </thead>
             <tbody id="routes-body">
               <tr><td colspan="8" class="empty">جارٍ التحميل…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ---------------------------------------------------------- vehicles -->
+      <section id="view-vehicles" class="view hidden">
+        <header class="view-head">
+          <div>
+            <h1>المركبات</h1>
+            <p class="muted">أسطول الباصات والميكروباصات والميني باص التي تُسند إلى المسارات.</p>
+          </div>
+          <button id="btn-add-vehicle" class="btn btn-primary" type="button">+ مركبة جديدة</button>
+        </header>
+        <div id="vehicles-error" class="banner banner-danger hidden"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>المعرف</th>
+                <th>النوع</th>
+                <th>الوصف</th>
+                <th>السعة</th>
+                <th>الحالة</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="vehicles-body">
+              <tr><td colspan="6" class="empty">جارٍ التحميل…</td></tr>
             </tbody>
           </table>
         </div>
@@ -568,6 +600,40 @@
     </main>
   </div>
 
+  <!-- ------------------------------------------------------- vehicle dialog -->
+  <dialog id="vehicle-dialog" class="dialog">
+    <form id="vehicle-form" method="dialog">
+      <h2 id="vehicle-dialog-title">مركبة جديدة</h2>
+      <div class="field-grid">
+        <label class="field">
+          <span>نوع المركبة</span>
+          <select name="vehicle_type">
+            <option value="bus">باص</option>
+            <option value="microbus">ميكروباص</option>
+            <option value="minibus">ميني باص</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>السعة (مقاعد)</span>
+          <select name="capacity" id="vehicle-capacity" required></select>
+        </label>
+      </div>
+      <label class="field field-full">
+        <span>وصف / لوحة (اختياري)</span>
+        <input name="label" type="text" maxlength="60" autocomplete="off">
+      </label>
+      <label class="field field-check">
+        <input name="is_active" type="checkbox" checked>
+        <span>مركبة مفعّلة</span>
+      </label>
+      <p class="error hidden" data-error-for="vehicle"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close="vehicle-dialog">إلغاء</button>
+        <button type="submit" class="btn btn-primary" id="btn-save-vehicle">حفظ</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- ------------------------------------------------------- station dialog -->
   <dialog id="station-dialog" class="dialog">
     <form id="station-form" method="dialog">
@@ -640,16 +706,19 @@
       <h2 id="route-dialog-title">مسار جديد</h2>
       <div class="field-grid">
         <label class="field">
-          <span>كود المسار</span>
-          <input name="code" type="text" placeholder="AH-ISM" required maxlength="12" autocomplete="off">
+          <span>كود المسار (تلقائي)</span>
+          <input name="code" type="text" placeholder="A-B-C-D" readonly dir="ltr"
+                 required maxlength="60" autocomplete="off">
         </label>
         <label class="field">
           <span>موعد الانطلاق</span>
           <input name="move_time" type="time" required>
         </label>
         <label class="field">
-          <span>سعة المقاعد</span>
-          <select name="seats" id="route-seats" required></select>
+          <span>المركبة</span>
+          <select name="vehicle_id" id="route-vehicle">
+            <option value="">بدون مركبة محددة</option>
+          </select>
         </label>
         <label class="field">
           <span>نوع المركبة</span>
@@ -657,6 +726,16 @@
             <option value="bus">باص</option>
             <option value="microbus">ميكروباص</option>
             <option value="minibus">ميني باص</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>سعة المقاعد</span>
+          <select name="seats" id="route-seats" required></select>
+        </label>
+        <label class="field">
+          <span>المفتش المسؤول</span>
+          <select name="inspector_id" id="route-inspector">
+            <option value="">بدون مفتش</option>
           </select>
         </label>
       </div>
@@ -868,6 +947,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="js/vendor/chart.umd.min.js?v=20261031b"></script>
-  <script type="module" src="js/app.js?v=20261101e"></script>
+  <script type="module" src="js/app.js?v=20261101f"></script>
 </body>
 </html>
