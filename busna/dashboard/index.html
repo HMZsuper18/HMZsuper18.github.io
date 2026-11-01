@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>باصنا | لوحة التحكم</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="stylesheet" href="css/app.css?v=20261101g">
+  <link rel="stylesheet" href="css/app.css?v=20261101h">
 </head>
 <body>
 
@@ -67,9 +67,11 @@
         <span class="brand-sub">لوحة التحكم</span>
       </div>
       <nav class="nav" id="nav">
+        <span class="nav-section">الرئيسية</span>
         <button class="nav-item is-active" data-view="overview" type="button">
           <span class="nav-dot"></span> نظرة عامة
         </button>
+        <span class="nav-section">الأسطول والمسارات</span>
         <button class="nav-item" data-view="routes" type="button">
           <span class="nav-dot"></span> المسارات
         </button>
@@ -79,19 +81,22 @@
         <button class="nav-item" data-view="vehicles" type="button">
           <span class="nav-dot"></span> المركبات
         </button>
+        <span class="nav-section">الفريق</span>
         <button class="nav-item" data-view="inspectors" type="button">
           <span class="nav-dot"></span> المفتشون
+        </button>
+        <button class="nav-item hidden" data-view="users" type="button">
+          <span class="nav-dot"></span> المستخدمون
+        </button>
+        <span class="nav-section">الإدارة</span>
+        <button class="nav-item hidden" data-view="subscriptions" type="button">
+          <span class="nav-dot"></span> الاشتراكات
         </button>
         <button class="nav-item hidden" data-view="feedback" type="button">
           <span class="nav-dot"></span> طلبات الدعم
           <span class="nav-badge hidden">0</span>
         </button>
-        <button class="nav-item hidden" data-view="subscriptions" type="button">
-          <span class="nav-dot"></span> الاشتراكات
-        </button>
-        <button class="nav-item hidden" data-view="users" type="button">
-          <span class="nav-dot"></span> المستخدمون
-        </button>
+        <span class="nav-section">النظام</span>
         <button class="nav-item hidden" data-view="tools" type="button">
           <span class="nav-dot"></span> أدوات التشخيص
         </button>
@@ -251,6 +256,7 @@
               <tr>
                 <th>المعرف</th>
                 <th>النوع</th>
+                <th>اللوحة</th>
                 <th>الوصف</th>
                 <th>السعة</th>
                 <th>الحالة</th>
@@ -258,7 +264,7 @@
               </tr>
             </thead>
             <tbody id="vehicles-body">
-              <tr><td colspan="6" class="empty">جارٍ التحميل…</td></tr>
+              <tr><td colspan="7" class="empty">جارٍ التحميل…</td></tr>
             </tbody>
           </table>
         </div>
@@ -525,6 +531,7 @@
             <option value="analyst">محلل</option>
             <option value="inspector">مفتش</option>
             <option value="admin">مدير</option>
+            <option value="super_admin">مدير عام</option>
           </select>
           <input id="users-compliance" type="number" min="0" max="100"
                  placeholder="حد الامتثال %">
@@ -617,11 +624,21 @@
           <span>السعة (مقاعد)</span>
           <select name="capacity" id="vehicle-capacity" required></select>
         </label>
+        <label class="field">
+          <span>رقم اللوحة (مطلوب)</span>
+          <input name="plate" type="text" required maxlength="20"
+                 placeholder="مثال: 1234 ABC" autocomplete="off" dir="ltr">
+        </label>
+        <label class="field">
+          <span>الوصف (اختياري)</span>
+          <input name="description" type="text" maxlength="80"
+                 placeholder="مثال: باص أحمد" autocomplete="off">
+        </label>
       </div>
-      <label class="field field-full">
-        <span>وصف / لوحة (اختياري)</span>
-        <input name="label" type="text" maxlength="60" autocomplete="off">
-      </label>
+      <div class="field field-full">
+        <span>مخطط المقاعد</span>
+        <div id="vehicle-seat-preview" class="seat-preview" aria-live="polite"></div>
+      </div>
       <label class="field field-check">
         <input name="is_active" type="checkbox" checked>
         <span>مركبة مفعّلة</span>
@@ -653,6 +670,19 @@
         <span>اسم المحطة</span>
         <input name="name" type="text" required maxlength="80" autocomplete="off">
       </label>
+      <div class="field-grid">
+        <label class="field">
+          <span>خط العرض (Latitude)</span>
+          <input name="latitude" type="number" step="any" min="-90" max="90"
+                 required placeholder="30.5444" autocomplete="off" dir="ltr">
+        </label>
+        <label class="field">
+          <span>خط الطول (Longitude)</span>
+          <input name="longitude" type="number" step="any" min="-180" max="180"
+                 required placeholder="31.6798" autocomplete="off" dir="ltr">
+        </label>
+      </div>
+      <span class="hint muted">انسخ الإحداثيات من خرائط جوجل (زر يمين على المكان).</span>
       <label class="field field-check">
         <input name="is_active" type="checkbox" checked>
         <span>محطة مفعّلة</span>
@@ -715,22 +745,21 @@
           <input name="move_time" type="time" required>
         </label>
         <label class="field">
-          <span>المركبة</span>
-          <select name="vehicle_id" id="route-vehicle">
-            <option value="">بدون مركبة محددة</option>
-          </select>
-        </label>
-        <label class="field">
           <span>نوع المركبة</span>
-          <select name="vehicle_type">
+          <select id="route-vehicle-type">
             <option value="bus">باص</option>
             <option value="microbus">ميكروباص</option>
             <option value="minibus">ميني باص</option>
           </select>
         </label>
         <label class="field">
-          <span>سعة المقاعد</span>
-          <select name="seats" id="route-seats" required></select>
+          <span>المركبة (ابحث بالمعرف أو المقاعد أو اللوحة)</span>
+          <div class="vehicle-picker" id="route-vehicle-picker" data-open="false">
+            <input type="search" id="route-vehicle-search" autocomplete="off"
+                   placeholder="اكتب للبحث…">
+            <input type="hidden" name="vehicle_id" id="route-vehicle">
+            <ul class="vehicle-picker-list" id="route-vehicle-list"></ul>
+          </div>
         </label>
         <label class="field">
           <span>المفتش المسؤول</span>
@@ -947,6 +976,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="js/vendor/chart.umd.min.js?v=20261031b"></script>
-  <script type="module" src="js/app.js?v=20261101g"></script>
+  <script type="module" src="js/app.js?v=20261101h"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261101g';
+import * as api from './api.js?v=20261101h';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -927,27 +927,89 @@ async function ensureRouteLookups(force = false) {
   state.vehicles = vehicles;
   state.routeInspectors = inspectors.rows || [];
   state.routeLookupsLoaded = true;
-  populateRouteVehicleSelect();
   populateRouteInspectorSelect();
+  renderVehiclePicker();
 }
 
-function populateRouteVehicleSelect(selectedId = null) {
-  const select = $('#route-vehicle');
-  if (!select) return;
-  const current = selectedId ?? select.value;
-  const options = state.vehicles
-    .filter((vehicle) => vehicle.is_active || String(vehicle.id) === String(current))
+function selectedRouteVehicle() {
+  const id = $('#route-vehicle')?.value;
+  return state.vehicles.find((vehicle) => String(vehicle.id) === String(id)) || null;
+}
+
+function routeVehicleType() {
+  return $('#route-vehicle-type')?.value || 'bus';
+}
+
+function vehicleOptionLabel(vehicle) {
+  return `#${vehicle.id} — ${vehicleLabel(vehicle.vehicle_type)} · ${num.format(
+    Number(vehicle.capacity) || 0,
+  )} مقعد · ${escapeHtml(vehicle.plate || '')}`;
+}
+
+function renderVehiclePicker() {
+  const list = $('#route-vehicle-list');
+  if (!list) return;
+  const type = routeVehicleType();
+  const query = ($('#route-vehicle-search')?.value || '').trim().toLowerCase();
+  const selectedId = $('#route-vehicle')?.value || '';
+
+  const matches = state.vehicles.filter((vehicle) => {
+    if (!vehicle.is_active && String(vehicle.id) !== String(selectedId)) return false;
+    if (vehicle.vehicle_type !== type) return false;
+    if (!query) return true;
+    const haystack =
+      `${vehicle.id} ${vehicle.capacity} ${vehicle.plate || ''} ${vehicle.description || ''}`.toLowerCase();
+    return haystack.includes(query);
+  });
+
+  if (!matches.length) {
+    list.innerHTML =
+      '<li class="vehicle-empty">لا توجد مركبات مطابقة لهذا النوع.</li>';
+    return;
+  }
+
+  list.innerHTML = matches
     .map(
-      (vehicle) =>
-        `<option value="${vehicle.id}">#${vehicle.id} — ${vehicleLabel(
-          vehicle.vehicle_type,
-        )} · ${num.format(Number(vehicle.capacity) || 0)} مقعد${
-          vehicle.label ? ` · ${escapeHtml(vehicle.label)}` : ''
-        }</option>`,
+      (vehicle) => `<li data-vehicle-option="${vehicle.id}"
+        aria-selected="${String(vehicle.id) === String(selectedId) ? 'true' : 'false'}">
+        <span>${vehicleOptionLabel(vehicle)}</span>
+        <span class="vehicle-meta">${escapeHtml(vehicle.description || '')}</span>
+      </li>`,
     )
     .join('');
-  select.innerHTML = `<option value="">بدون مركبة محددة</option>${options}`;
-  select.value = current && select.querySelector(`option[value="${current}"]`) ? String(current) : '';
+}
+
+function openVehiclePicker() {
+  const picker = $('#route-vehicle-picker');
+  if (!picker) return;
+  picker.dataset.open = 'true';
+  renderVehiclePicker();
+}
+
+function closeVehiclePicker() {
+  const picker = $('#route-vehicle-picker');
+  if (picker) picker.dataset.open = 'false';
+}
+
+function selectRouteVehicle(id) {
+  const vehicle = state.vehicles.find((item) => String(item.id) === String(id));
+  if (!vehicle) return;
+  const hidden = $('#route-vehicle');
+  const search = $('#route-vehicle-search');
+  if (hidden) hidden.value = String(vehicle.id);
+  if (search) {
+    search.value = `#${vehicle.id} — ${vehicleLabel(vehicle.vehicle_type)} · ${vehicle.capacity} مقعد`;
+  }
+  closeVehiclePicker();
+  updateSeatPreview();
+}
+
+function clearRouteVehicle() {
+  const hidden = $('#route-vehicle');
+  const search = $('#route-vehicle-search');
+  if (hidden) hidden.value = '';
+  if (search) search.value = '';
+  updateSeatPreview();
 }
 
 function populateRouteInspectorSelect(selectedId = null) {
@@ -955,7 +1017,10 @@ function populateRouteInspectorSelect(selectedId = null) {
   if (!select) return;
   const current = selectedId ?? select.value;
   const options = state.routeInspectors
-    .filter((inspector) => inspector.is_active || String(inspector.id) === String(current))
+    .filter(
+      (inspector) =>
+        inspector.is_active || String(inspector.id) === String(current),
+    )
     .map(
       (inspector) =>
         `<option value="${inspector.id}">${escapeHtml(
@@ -964,31 +1029,10 @@ function populateRouteInspectorSelect(selectedId = null) {
     )
     .join('');
   select.innerHTML = `<option value="">بدون مفتش</option>${options}`;
-  select.value = current && select.querySelector(`option[value="${current}"]`) ? String(current) : '';
-}
-
-// Selecting a fleet vehicle copies its type and capacity onto the route.
-// The database trigger enforces the same rule on save.
-function applyVehicleToRouteForm() {
-  const form = $('#route-form');
-  const select = $('#route-vehicle');
-  if (!form || !select) return;
-  const vehicle = state.vehicles.find((item) => String(item.id) === String(select.value));
-  if (vehicle) {
-    form.vehicle_type.value = vehicle.vehicle_type;
-    populateSeatOptions(vehicle.vehicle_type, vehicle.capacity);
-    updateSeatPreview();
-  }
-  lockRouteVehicleFields();
-}
-
-function lockRouteVehicleFields() {
-  const form = $('#route-form');
-  const select = $('#route-vehicle');
-  if (!form || !select) return;
-  const locked = Boolean(select.value);
-  form.vehicle_type.disabled = locked;
-  form.seats.disabled = locked;
+  select.value =
+    current && select.querySelector(`option[value="${current}"]`)
+      ? String(current)
+      : '';
 }
 
 function buildSeatRows(vehicle, total) {
@@ -1100,13 +1144,9 @@ function benchSeatKind(index, count) {
   return 'middle';
 }
 
-function updateSeatPreview() {
-  const box = $('#seat-preview');
-  if (!box) return;
-  const form = $('#route-form');
-  const vehicle = form.vehicle_type.value;
-  const total = Math.max(1, Math.min(60, Number(form.seats.value) || 1));
-  const rows = buildSeatRows(vehicle, total);
+function renderSeatPreview(box, vehicle, total) {
+  const safeTotal = Math.max(1, Math.min(60, Number(total) || 1));
+  const rows = buildSeatRows(vehicle, safeTotal);
   const seatRows = rows
     .map((row, rowIndex) => {
       const driver =
@@ -1136,7 +1176,7 @@ function updateSeatPreview() {
 
   box.innerHTML = `
     <div class="seat-preview-head">
-      <strong>${vehicleLabel(vehicle)} · ${total} مقعد</strong>
+      <strong>${vehicleLabel(vehicle)} · ${safeTotal} مقعد</strong>
       <span class="seat-legend">
         <i class="seat-dot seat-window"></i> شباك
         <i class="seat-dot seat-middle"></i> أوسط
@@ -1148,6 +1188,30 @@ function updateSeatPreview() {
       <div class="seat-rows">${seatRows}</div>
     </div>`;
 }
+
+function updateSeatPreview() {
+  const box = $('#seat-preview');
+  if (!box) return;
+  const vehicle = selectedRouteVehicle();
+  if (!vehicle) {
+    box.innerHTML =
+      '<p class="empty">اختر مركبة من القائمة لعرض مخطط المقاعد.</p>';
+    return;
+  }
+  renderSeatPreview(box, vehicle.vehicle_type, vehicle.capacity);
+}
+
+function updateVehicleSeatPreview() {
+  const box = $('#vehicle-seat-preview');
+  if (!box) return;
+  const form = $('#vehicle-form');
+  renderSeatPreview(
+    box,
+    form.vehicle_type.value,
+    Number(form.capacity.value) || 1,
+  );
+}
+
 
 async function openRouteDialog(route = null) {
   const form = $('#route-form');
@@ -1168,25 +1232,26 @@ async function openRouteDialog(route = null) {
   let stops = [];
   if (route) {
     form.move_time.value = formatTime(route.move_time);
-    form.vehicle_type.value = route.vehicle_type || 'bus';
-    populateSeatOptions(form.vehicle_type.value, route.seats);
     form.is_active.checked = Boolean(route.is_active);
-    populateRouteVehicleSelect(route.vehicle_id ?? '');
+    const assigned = state.vehicles.find(
+      (vehicle) => String(vehicle.id) === String(route.vehicle_id),
+    );
+    $('#route-vehicle-type').value = assigned?.vehicle_type || route.vehicle_type || 'bus';
     populateRouteInspectorSelect(route.inspector_id ?? '');
     try {
       stops = await api.fetchRouteStops(route.id);
     } catch (_) {
       stops = [];
     }
+    if (assigned) selectRouteVehicle(assigned.id);
+    else clearRouteVehicle();
   } else {
     form.is_active.checked = true;
-    form.vehicle_type.value = 'bus';
-    populateSeatOptions('bus', 14);
-    populateRouteVehicleSelect('');
+    $('#route-vehicle-type').value = 'bus';
     populateRouteInspectorSelect('');
+    clearRouteVehicle();
   }
 
-  lockRouteVehicleFields();
   renderRouteGraph(stops);
   $('#route-dialog').showModal();
 }
@@ -1223,6 +1288,12 @@ async function saveRoute(event) {
     return;
   }
 
+  const vehicle = selectedRouteVehicle();
+  if (!vehicle) {
+    setFormError('route', 'اختر مركبة من الأسطول أولاً.');
+    return;
+  }
+
   const last = stops[stops.length - 1];
   const baseCode = stops.map((stop) => stop.code).join('-');
   const code = await uniqueRouteCode(baseCode, state.routeEditingId);
@@ -1234,9 +1305,9 @@ async function saveRoute(event) {
     origin: stops[0].name,
     destination: last.name,
     move_time: form.move_time.value,
-    seats: Number(form.seats.value),
-    vehicle_type: form.vehicle_type.value,
-    vehicle_id: form.vehicle_id.value ? Number(form.vehicle_id.value) : null,
+    seats: vehicle.capacity,
+    vehicle_type: vehicle.vehicle_type,
+    vehicle_id: vehicle.id,
     inspector_id: form.inspector_id.value || null,
     is_active: form.is_active.checked,
   };
@@ -1413,6 +1484,8 @@ async function openStationDialog(station = null) {
     form.code.value = station.code;
     form.name.value = station.name;
     form.governorate.value = station.governorate;
+    form.latitude.value = station.latitude ?? '';
+    form.longitude.value = station.longitude ?? '';
     form.is_active.checked = Boolean(station.is_active);
   } else {
     form.is_active.checked = true;
@@ -1429,6 +1502,8 @@ async function saveStation(event) {
     code: form.code.value.trim().toUpperCase(),
     name: form.name.value.trim(),
     governorate: form.governorate.value,
+    latitude: Number(form.latitude.value),
+    longitude: Number(form.longitude.value),
     is_active: form.is_active.checked,
   };
   button.disabled = true;
@@ -1540,7 +1615,7 @@ function renderVehicles() {
   const canManage = Boolean(state.session?.canManage);
 
   if (!state.vehicles.length) {
-    body.innerHTML = '<tr><td colspan="6" class="empty">لا توجد مركبات. أضف أول مركبة من الأعلى.</td></tr>';
+    body.innerHTML = '<tr><td colspan="7" class="empty">لا توجد مركبات. أضف أول مركبة من الأعلى.</td></tr>';
     return;
   }
 
@@ -1550,7 +1625,8 @@ function renderVehicles() {
       <tr>
         <td><code>#${vehicle.id}</code></td>
         <td><span class="badge badge-neutral">${vehicleLabel(vehicle.vehicle_type)}</span></td>
-        <td>${escapeHtml(vehicle.label || '—')}</td>
+        <td><code>${escapeHtml(vehicle.plate || '—')}</code></td>
+        <td>${escapeHtml(vehicle.description || '—')}</td>
         <td>${num.format(Number(vehicle.capacity) || 0)}</td>
         <td>
           ${canManage
@@ -1586,13 +1662,15 @@ function openVehicleDialog(vehicle = null) {
   if (vehicle) {
     form.vehicle_type.value = vehicle.vehicle_type;
     populateVehicleCapacity(vehicle.vehicle_type, vehicle.capacity);
-    form.label.value = vehicle.label || '';
+    form.plate.value = vehicle.plate || '';
+    form.description.value = vehicle.description || '';
     form.is_active.checked = Boolean(vehicle.is_active);
   } else {
     form.vehicle_type.value = 'bus';
     populateVehicleCapacity('bus');
     form.is_active.checked = true;
   }
+  updateVehicleSeatPreview();
   $('#vehicle-dialog').showModal();
 }
 
@@ -1604,7 +1682,8 @@ async function saveVehicle(event) {
   const payload = {
     vehicle_type: form.vehicle_type.value,
     capacity: Number(form.capacity.value),
-    label: form.label.value.trim() || null,
+    plate: form.plate.value.trim(),
+    description: form.description.value.trim() || null,
     is_active: form.is_active.checked,
   };
   button.disabled = true;
@@ -2930,8 +3009,9 @@ function bindStatic() {
   $('#vehicle-form').addEventListener('submit', saveVehicle);
   $('#vehicle-form').vehicle_type.addEventListener('change', () => {
     populateVehicleCapacity($('#vehicle-form').vehicle_type.value);
+    updateVehicleSeatPreview();
   });
-  $('#route-vehicle').addEventListener('change', applyVehicleToRouteForm);
+  $('#vehicle-capacity').addEventListener('change', updateVehicleSeatPreview);
   $('#station-form').addEventListener('submit', saveStation);
   $('#governorate-form').addEventListener('submit', saveGovernorate);
   $('#inspector-form').addEventListener('submit', saveInspector);
@@ -2953,13 +3033,24 @@ function bindStatic() {
   $('#route-graph').addEventListener('input', updateTripCostPreview);
   $('#trip-start').addEventListener('change', updateTripCostPreview);
   $('#trip-end').addEventListener('change', updateTripCostPreview);
-  $('#route-form').vehicle_type.addEventListener('change', () => {
-    const form = $('#route-form');
-    populateSeatOptions(form.vehicle_type.value);
-    updateSeatPreview();
+  $('#route-vehicle-type').addEventListener('change', () => {
+    clearRouteVehicle();
+    openVehiclePicker();
   });
-  $('#route-form').seats.addEventListener('input', updateSeatPreview);
-  $('#route-form').seats.addEventListener('change', updateSeatPreview);
+  $('#route-vehicle-search').addEventListener('focus', openVehiclePicker);
+  $('#route-vehicle-search').addEventListener('input', () => {
+    const hidden = $('#route-vehicle');
+    if (hidden) hidden.value = '';
+    openVehiclePicker();
+  });
+  $('#route-vehicle-list').addEventListener('click', (event) => {
+    const option = event.target.closest('[data-vehicle-option]');
+    if (!option) return;
+    selectRouteVehicle(option.dataset.vehicleOption);
+  });
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('#route-vehicle-picker')) closeVehiclePicker();
+  });
   $('#btn-apply-stations').addEventListener('click', () => {
     state.stationFilters = {
       search: $('#stations-search').value,
