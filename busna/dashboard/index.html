@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>باصنا | لوحة التحكم</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="stylesheet" href="css/app.css?v=20261101t">
+  <link rel="stylesheet" href="css/app.css?v=20261101u">
 </head>
 <body>
 
@@ -233,6 +233,7 @@
               <tr>
                 <th>الكود</th>
                 <th>المسار</th>
+                <th>التاريخ</th>
                 <th>الموعد</th>
                 <th>المركبة</th>
                 <th>السعر</th>
@@ -755,6 +756,10 @@
                  required maxlength="60" autocomplete="off">
         </label>
         <label class="field">
+          <span>تاريخ الرحلة</span>
+          <input name="trip_date" type="date" required>
+        </label>
+        <label class="field">
           <span>موعد الانطلاق</span>
           <input name="move_time" type="time" required>
         </label>
@@ -991,6 +996,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="js/vendor/chart.umd.min.js?v=20261031b"></script>
-  <script type="module" src="js/app.js?v=20261101t"></script>
+  <script type="module" src="js/app.js?v=20261101u"></script>
 </body>
 </html>

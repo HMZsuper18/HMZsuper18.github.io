@@ -133,7 +133,7 @@ export async function fetchRecentBookings(limit = 12) {
 // ------------------------------------------------------------------ routes --
 
 const ROUTE_COLUMNS =
-  'id, code, price, origin, destination, seats, move_time, is_active, vehicle_type, vehicle_id, inspector_id';
+  'id, code, price, origin, destination, seats, move_time, is_active, vehicle_type, vehicle_id, inspector_id, trip_date';
 
 export async function fetchRoutes() {
   const [result, countResult] = await Promise.all([

@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261101t';
+import * as api from './api.js?v=20261101u';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -166,6 +166,7 @@ function positionCustomSelect(trigger) {
 }
 
 function openCustomSelect(select, trigger, render) {
+  if (typeof closeDateTimePicker === 'function') closeDateTimePicker();
   const popup = customSelectPopup();
   if (customSelectState.openSelect === select && popup.dataset.open === 'true') {
     closeCustomSelect();
@@ -309,10 +310,384 @@ function initCustomSelects() {
   bodyObserver.observe(document.body, { childList: true, subtree: true });
 }
 
+// ---------------------------------------------------- custom date / time --
+
+const customDateTimeState = {
+  popup: null,
+  openInput: null,
+  openTrigger: null,
+  viewDate: null,
+  hour: 8,
+  minute: 0,
+};
+
+const DATE_CALENDAR_ICON =
+  '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M7 2h2v2h6V2h2v2h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2Zm12 8H5v10h14V10Z"/></svg>';
+const DATE_CLOCK_ICON =
+  '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 5h-2v6l5 3 1-1.7-4-2.3V7Z"/></svg>';
+
+const inputValueDescriptor = Object.getOwnPropertyDescriptor(
+  HTMLInputElement.prototype,
+  'value',
+);
+
+function initCustomDateTimes() {
+  document
+    .querySelectorAll('input[type="date"], input[type="time"]')
+    .forEach(enhanceDateTimeInput);
+
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType !== 1) return;
+        if (node.matches?.('input[type="date"], input[type="time"]')) {
+          enhanceDateTimeInput(node);
+        }
+        node
+          .querySelectorAll?.('input[type="date"], input[type="time"]')
+          .forEach(enhanceDateTimeInput);
+      });
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  document.addEventListener('click', (event) => {
+    if (!customDateTimeState.openInput) return;
+    if (
+      event.target.closest('.custom-datetime-popup') ||
+      event.target.closest('.custom-datetime-trigger')
+    ) {
+      return;
+    }
+    closeDateTimePicker();
+  });
+
+  window.addEventListener(
+    'scroll',
+    (event) => {
+      const popup = customDateTimeState.popup;
+      if (popup && event.target instanceof Node && popup.contains(event.target)) {
+        return;
+      }
+      closeDateTimePicker();
+    },
+    true,
+  );
+  window.addEventListener('resize', closeDateTimePicker);
+
+  document.addEventListener(
+    'reset',
+    (event) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) return;
+      queueMicrotask(() => {
+        form
+          .querySelectorAll('input[type="date"], input[type="time"]')
+          .forEach((input) => input._syncCustomDateTime?.());
+      });
+    },
+    true,
+  );
+}
+
+function enhanceDateTimeInput(input) {
+  if (!input || input.dataset.customDateTime === 'true') return;
+  input.dataset.customDateTime = 'true';
+
+  const isDate = input.type === 'date';
+  const wrapper = document.createElement('div');
+  wrapper.className = 'custom-datetime';
+  input.parentNode.insertBefore(wrapper, input);
+  wrapper.appendChild(input);
+  input.classList.add('custom-datetime-native');
+
+  const trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = 'custom-datetime-trigger';
+  trigger.setAttribute('aria-haspopup', 'dialog');
+  trigger.setAttribute('aria-expanded', 'false');
+
+  const valueLabel = document.createElement('span');
+  valueLabel.className = 'custom-datetime-value';
+  const icon = document.createElement('span');
+  icon.className = 'custom-datetime-icon';
+  icon.innerHTML = isDate ? DATE_CALENDAR_ICON : DATE_CLOCK_ICON;
+  trigger.appendChild(valueLabel);
+  trigger.appendChild(icon);
+  wrapper.appendChild(trigger);
+
+  const sync = () => {
+    const value = input.value;
+    valueLabel.textContent = value
+      ? isDate
+        ? formatPickerDate(value)
+        : formatClock(value)
+      : isDate
+        ? 'اختر التاريخ'
+        : 'اختر الوقت';
+    trigger.classList.toggle('is-placeholder', !value);
+  };
+
+  Object.defineProperty(input, 'value', {
+    configurable: true,
+    get() {
+      return inputValueDescriptor.get.call(this);
+    },
+    set(value) {
+      inputValueDescriptor.set.call(this, value);
+      sync();
+    },
+  });
+
+  trigger.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (customDateTimeState.openInput === input) {
+      closeDateTimePicker();
+    } else {
+      openDateTimePicker(input, trigger);
+    }
+  });
+
+  input.addEventListener('change', sync);
+  input.addEventListener('input', sync);
+  input._syncCustomDateTime = sync;
+  sync();
+}
+
+function customDateTimePopup() {
+  if (!customDateTimeState.popup) {
+    const popup = document.createElement('div');
+    popup.className = 'custom-datetime-popup';
+    popup.dataset.open = 'false';
+    document.body.appendChild(popup);
+    customDateTimeState.popup = popup;
+  }
+  return customDateTimeState.popup;
+}
+
+function closeDateTimePicker() {
+  if (customDateTimeState.popup) {
+    customDateTimeState.popup.dataset.open = 'false';
+  }
+  if (customDateTimeState.openTrigger) {
+    customDateTimeState.openTrigger.setAttribute('aria-expanded', 'false');
+  }
+  customDateTimeState.openInput = null;
+  customDateTimeState.openTrigger = null;
+}
+
+function openDateTimePicker(input, trigger) {
+  closeCustomSelect();
+  closeDateTimePicker();
+  const popup = customDateTimePopup();
+  const host = trigger.closest('dialog[open]') || document.body;
+  if (popup.parentNode !== host) host.appendChild(popup);
+
+  customDateTimeState.openInput = input;
+  customDateTimeState.openTrigger = trigger;
+  trigger.setAttribute('aria-expanded', 'true');
+
+  if (input.type === 'date') {
+    const current = input.value
+      ? new Date(`${input.value}T00:00:00`)
+      : new Date();
+    customDateTimeState.viewDate = new Date(
+      current.getFullYear(),
+      current.getMonth(),
+      1,
+    );
+    renderCalendarPicker();
+    positionDateTimePicker(trigger, 286);
+  } else {
+    const [hour, minute] = (input.value || '08:00').split(':');
+    customDateTimeState.hour = Number(hour) || 0;
+    customDateTimeState.minute = Number(minute) || 0;
+    renderTimePicker();
+    positionDateTimePicker(trigger, 224);
+  }
+
+  popup.dataset.open = 'true';
+}
+
+function positionDateTimePicker(trigger, width) {
+  const popup = customDateTimeState.popup;
+  const rect = trigger.getBoundingClientRect();
+  const margin = 8;
+  const gap = 4;
+  const popupWidth = Math.min(width, window.innerWidth - margin * 2);
+  const spaceBelow = window.innerHeight - rect.bottom - gap - margin;
+  const spaceAbove = rect.top - gap - margin;
+  const openAbove = spaceBelow < 260 && spaceAbove > spaceBelow;
+  const left = Math.max(
+    margin,
+    Math.min(rect.right - popupWidth, window.innerWidth - popupWidth - margin),
+  );
+
+  popup.style.width = `${popupWidth}px`;
+  popup.style.left = `${left}px`;
+  popup.style.maxHeight = `${Math.min(340, Math.max(180, openAbove ? spaceAbove : spaceBelow))}px`;
+
+  if (openAbove) {
+    popup.style.top = 'auto';
+    popup.style.bottom = `${window.innerHeight - rect.top + gap}px`;
+  } else {
+    popup.style.top = `${rect.bottom + gap}px`;
+    popup.style.bottom = 'auto';
+  }
+}
+
+function formatPickerDate(value) {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('ar-EG', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+}
+
+function pad2(value) {
+  return String(value).padStart(2, '0');
+}
+
+function renderCalendarPicker() {
+  const popup = customDateTimeState.popup;
+  const input = customDateTimeState.openInput;
+  const view = customDateTimeState.viewDate;
+  const year = view.getFullYear();
+  const month = view.getMonth();
+  const selected = input?.value
+    ? new Date(`${input.value}T00:00:00`)
+    : null;
+  const today = new Date();
+  const startOffset = (new Date(year, month, 1).getDay() + 1) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthLabel = new Intl.DateTimeFormat('ar-EG', {
+    month: 'long',
+    year: 'numeric',
+  }).format(view);
+  const weekdays = ['سبت', 'أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة'];
+
+  let cells = '';
+  for (let index = 0; index < startOffset; index += 1) {
+    cells += '<span class="calendar-day is-blank"></span>';
+  }
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = new Date(year, month, day);
+    const iso = `${year}-${pad2(month + 1)}-${pad2(day)}`;
+    const classes = ['calendar-day'];
+    if (selected && date.toDateString() === selected.toDateString()) {
+      classes.push('is-selected');
+    }
+    if (date.toDateString() === today.toDateString()) {
+      classes.push('is-today');
+    }
+    cells += `<button type="button" class="${classes.join(' ')}" data-date="${iso}">${day}</button>`;
+  }
+
+  popup.innerHTML = `
+    <div class="calendar-head">
+      <button type="button" class="calendar-nav" data-month="-1" aria-label="الشهر السابق">›</button>
+      <span class="calendar-title">${monthLabel}</span>
+      <button type="button" class="calendar-nav" data-month="1" aria-label="الشهر التالي">‹</button>
+    </div>
+    <div class="calendar-weekdays">${weekdays
+      .map((weekday) => `<span>${weekday}</span>`)
+      .join('')}</div>
+    <div class="calendar-grid">${cells}</div>`;
+
+  popup.querySelectorAll('[data-month]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const delta = Number(button.dataset.month);
+      customDateTimeState.viewDate = new Date(year, month + delta, 1);
+      renderCalendarPicker();
+    });
+  });
+
+  popup.querySelectorAll('[data-date]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (!customDateTimeState.openInput) return;
+      customDateTimeState.openInput.value = button.dataset.date;
+      customDateTimeState.openInput.dispatchEvent(
+        new Event('change', { bubbles: true }),
+      );
+      closeDateTimePicker();
+    });
+  });
+}
+
+function renderTimePicker() {
+  const popup = customDateTimeState.popup;
+  const hour = customDateTimeState.hour;
+  const minute = customDateTimeState.minute;
+
+  const hours = Array.from({ length: 24 }, (_, value) => {
+    const selected = value === hour ? ' is-selected' : '';
+    return `<button type="button" class="time-option${selected}" data-hour="${value}">${pad2(value)}</button>`;
+  }).join('');
+  const minutes = Array.from({ length: 60 }, (_, value) => {
+    const selected = value === minute ? ' is-selected' : '';
+    return `<button type="button" class="time-option${selected}" data-minute="${value}">${pad2(value)}</button>`;
+  }).join('');
+
+  popup.innerHTML = `
+    <div class="time-picker">
+      <div class="time-col">
+        <span class="time-col-head">الساعة</span>
+        ${hours}
+      </div>
+      <div class="time-col">
+        <span class="time-col-head">الدقيقة</span>
+        ${minutes}
+      </div>
+    </div>`;
+
+  popup.querySelectorAll('.time-col').forEach((column) => {
+    const selected = column.querySelector('.is-selected');
+    if (selected) {
+      column.scrollTop = Math.max(
+        0,
+        selected.offsetTop - column.clientHeight / 2 + selected.offsetHeight / 2,
+      );
+    }
+  });
+
+  popup.querySelectorAll('[data-hour]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (!customDateTimeState.openInput) return;
+      customDateTimeState.hour = Number(button.dataset.hour);
+      popup.querySelectorAll('[data-hour]').forEach((item) => {
+        item.classList.toggle(
+          'is-selected',
+          Number(item.dataset.hour) === customDateTimeState.hour,
+        );
+      });
+      customDateTimeState.openInput.value = `${pad2(customDateTimeState.hour)}:${pad2(customDateTimeState.minute)}`;
+      customDateTimeState.openInput.dispatchEvent(
+        new Event('change', { bubbles: true }),
+      );
+    });
+  });
+
+  popup.querySelectorAll('[data-minute]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (!customDateTimeState.openInput) return;
+      customDateTimeState.minute = Number(button.dataset.minute);
+      customDateTimeState.openInput.value = `${pad2(customDateTimeState.hour)}:${pad2(customDateTimeState.minute)}`;
+      customDateTimeState.openInput.dispatchEvent(
+        new Event('change', { bubbles: true }),
+      );
+      closeDateTimePicker();
+    });
+  });
+}
+
 // ------------------------------------------------------------------ boot --
 
 async function boot() {
   initCustomSelects();
+  initCustomDateTimes();
   bindStatic();
   consumeOAuthError();
 
@@ -894,7 +1269,7 @@ const SEAT_PRESETS = {
     { seats: 26, label: '26 مقعد — 2 + 4×6' },
   ],
   tamnaya: [
-    { seats: 7, label: '7 مقاعد — 2 + 2 + 3' },
+    { seats: 7, label: '7 مقاعد — 1 + 3 + 3' },
   ],
 };
 
@@ -958,7 +1333,7 @@ function renderRoutes() {
   const canManage = Boolean(state.session?.canManage);
 
   if (!state.routes.length) {
-    body.innerHTML = '<tr><td colspan="8" class="empty">لا توجد مسارات. أضف أول مسار من الأعلى.</td></tr>';
+    body.innerHTML = '<tr><td colspan="9" class="empty">لا توجد مسارات. أضف أول مسار من الأعلى.</td></tr>';
     return;
   }
 
@@ -968,6 +1343,7 @@ function renderRoutes() {
       <tr>
         <td><code>${escapeHtml(route.code)}</code></td>
         <td>${escapeHtml(route.origin)} ← ${escapeHtml(route.destination)}</td>
+        <td>${formatTripDate(route.trip_date)}</td>
         <td>${formatClock(route.move_time)}</td>
         <td><span class="badge badge-neutral">${vehicleLabel(route.vehicle_type)}</span></td>
         <td>${num.format(Number(route.price))} ج.م</td>
@@ -1430,18 +1806,12 @@ function buildSeatRows(vehicle, total) {
   }
 
   if (vehicle === 'tamnaya') {
-    const front = total >= 2 ? 2 : total;
-    if (front > 0) {
-      rows.push(
-        Array.from({ length: front }, () => ({
-          seat: seat++,
-          kind: 'window',
-        })),
-      );
+    if (total > 0) {
+      rows.push([{ seat: seat++, kind: 'window' }]);
     }
-    let remaining = total - front;
+    let remaining = total - (total > 0 ? 1 : 0);
     while (remaining > 0) {
-      const count = remaining > 3 ? 2 : remaining;
+      const count = remaining > 3 ? 3 : remaining;
       rows.push(
         Array.from({ length: count }, (_, index) => ({
           seat: seat++,
@@ -1582,6 +1952,7 @@ async function openRouteDialog(route = null) {
   let stops = [];
   if (route) {
     form.move_time.value = formatTime(route.move_time);
+    form.trip_date.value = route.trip_date || '';
     form.is_active.checked = Boolean(route.is_active);
     const assigned = state.vehicles.find(
       (vehicle) => String(vehicle.id) === String(route.vehicle_id),
@@ -1644,6 +2015,15 @@ async function saveRoute(event) {
     return;
   }
 
+  if (!form.trip_date.value) {
+    setFormError('route', 'اختر تاريخ الرحلة.');
+    return;
+  }
+  if (!form.move_time.value) {
+    setFormError('route', 'اختر موعد الانطلاق.');
+    return;
+  }
+
   const last = stops[stops.length - 1];
   const baseCode = stops.map((stop) => stop.code).join('-');
   const code = await uniqueRouteCode(baseCode, state.routeEditingId);
@@ -1654,6 +2034,7 @@ async function saveRoute(event) {
     price: last.price,
     origin: stops[0].name,
     destination: last.name,
+    trip_date: form.trip_date.value || null,
     move_time: form.move_time.value,
     seats: vehicle.capacity,
     vehicle_type: vehicle.vehicle_type,
@@ -3259,6 +3640,17 @@ function formatTime(value) {
 
 // Display only. `formatTime` stays 24-hour because <input type="time"> will
 // not accept anything else when the edit dialog is filled in.
+function formatTripDate(value) {
+  if (!value) return '—';
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('ar-EG', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date);
+}
+
 function formatClock(value) {
   if (!value) return '—';
   const [rawHour, rawMinute] = String(value).split(':');
