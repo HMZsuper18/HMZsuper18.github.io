@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261101p';
+import * as api from './api.js?v=20261101q';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -885,10 +885,21 @@ function vehicleLabel(value) {
   return 'باص';
 }
 
+const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+
+function toArabicDigits(value) {
+  return String(value ?? '').replace(/[0-9]/g, (digit) => ARABIC_DIGITS[Number(digit)]);
+}
+
+function formatPlateLetters(value) {
+  const letters = String(value || '').replace(/[^\u0621-\u064A]/g, '');
+  return letters.slice(0, 3).split('').join(' ');
+}
+
 function vehiclePlateLabel(vehicle) {
   const letters = String(vehicle.plate_letters || '').trim();
   const numbers = vehicle.plate_numbers;
-  return `${letters}${numbers == null ? '' : ` ${numbers}`}`.trim() || '—';
+  return `${letters}${numbers == null ? '' : ` ${toArabicDigits(numbers)}`}`.trim() || '—';
 }
 
 function normalizePlateDigits(value) {
@@ -1972,8 +1983,9 @@ function openVehicleDialog(vehicle = null) {
   if (vehicle) {
     form.vehicle_type.value = vehicle.vehicle_type;
     populateVehicleCapacity(vehicle.vehicle_type, vehicle.capacity);
-    form.plate_letters.value = vehicle.plate_letters || '';
-    form.plate_numbers.value = vehicle.plate_numbers ?? '';
+    form.plate_letters.value = formatPlateLetters(vehicle.plate_letters || '');
+    form.plate_numbers.value =
+      vehicle.plate_numbers == null ? '' : toArabicDigits(vehicle.plate_numbers);
     form.description.value = vehicle.description || '';
     form.is_active.checked = Boolean(vehicle.is_active);
   } else {
@@ -1991,7 +2003,8 @@ async function saveVehicle(event) {
   const button = $('#btn-save-vehicle');
   setFormError('vehicle', null);
 
-  const letters = form.plate_letters.value.trim().replace(/\s+/g, ' ');
+  const letters = formatPlateLetters(form.plate_letters.value);
+  form.plate_letters.value = letters;
   if (!/^[\u0621-\u064A]( ?[\u0621-\u064A]){1,2}$/.test(letters)) {
     setFormError('vehicle', 'حروف اللوحة يجب أن تكون حرفين أو ثلاثة حروف عربية.');
     return;
@@ -3337,6 +3350,20 @@ function bindStatic() {
     updateVehicleSeatPreview();
   });
   $('#vehicle-capacity').addEventListener('change', updateVehicleSeatPreview);
+  $('#vehicle-form').plate_letters.addEventListener('input', (event) => {
+    const formatted = formatPlateLetters(event.currentTarget.value);
+    if (event.currentTarget.value !== formatted) {
+      event.currentTarget.value = formatted;
+    }
+  });
+  $('#vehicle-form').plate_numbers.addEventListener('input', (event) => {
+    const formatted = toArabicDigits(
+      normalizePlateDigits(event.currentTarget.value).slice(0, 4),
+    );
+    if (event.currentTarget.value !== formatted) {
+      event.currentTarget.value = formatted;
+    }
+  });
   $('#station-form').addEventListener('submit', saveStation);
   $('#governorate-form').addEventListener('submit', saveGovernorate);
   $('#inspector-form').addEventListener('submit', saveInspector);

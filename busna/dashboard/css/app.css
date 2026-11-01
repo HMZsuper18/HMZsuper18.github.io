@@ -1978,3 +1978,15 @@ html {
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+/* Action cells must stay table cells so their bottom border lines up with
+   the rest of the row (flex on a <td> breaks the separator). */
+td.row-actions {
+  display: table-cell;
+  text-align: left;
+  white-space: nowrap;
+}
+
+td.row-actions .btn + .btn {
+  margin-inline-start: 8px;
+}
