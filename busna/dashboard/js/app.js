@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261101f';
+import * as api from './api.js?v=20261101g';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -974,10 +974,21 @@ function applyVehicleToRouteForm() {
   const select = $('#route-vehicle');
   if (!form || !select) return;
   const vehicle = state.vehicles.find((item) => String(item.id) === String(select.value));
-  if (!vehicle) return;
-  form.vehicle_type.value = vehicle.vehicle_type;
-  populateSeatOptions(vehicle.vehicle_type, vehicle.capacity);
-  updateSeatPreview();
+  if (vehicle) {
+    form.vehicle_type.value = vehicle.vehicle_type;
+    populateSeatOptions(vehicle.vehicle_type, vehicle.capacity);
+    updateSeatPreview();
+  }
+  lockRouteVehicleFields();
+}
+
+function lockRouteVehicleFields() {
+  const form = $('#route-form');
+  const select = $('#route-vehicle');
+  if (!form || !select) return;
+  const locked = Boolean(select.value);
+  form.vehicle_type.disabled = locked;
+  form.seats.disabled = locked;
 }
 
 function buildSeatRows(vehicle, total) {
@@ -1175,6 +1186,7 @@ async function openRouteDialog(route = null) {
     populateRouteInspectorSelect('');
   }
 
+  lockRouteVehicleFields();
   renderRouteGraph(stops);
   $('#route-dialog').showModal();
 }
