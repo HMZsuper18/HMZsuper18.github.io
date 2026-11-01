@@ -1643,20 +1643,46 @@ tr.is-unread td {
 
 /* ------------------------------------------------- custom dropdowns + bars */
 
+:root {
+  --scroll-thumb: rgba(14, 42, 71, 0.34);
+  --scroll-thumb-hover: rgba(14, 42, 71, 0.58);
+  --scroll-track: rgba(240, 232, 214, 0.55);
+}
+
+/* Native selects styled to match the dashboard's own menus. The arrow is a
+   background image, so it must be marked important to beat the `background`
+   shorthands on `.field select` / `.filter-bar select`. */
 select {
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%235b6b7c' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: left 12px center;
-  background-size: 11px 7px;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%235b6b7c' d='M6 8 0 0h12z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: left 12px center !important;
+  background-size: 11px 7px !important;
   padding-left: 34px !important;
+  padding-right: 12px;
   cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+}
+
+select:hover:not(:disabled) {
+  border-color: var(--navy-light);
+}
+
+select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(46, 125, 209, 0.18);
 }
 
 select:disabled {
-  opacity: 0.62;
+  opacity: 0.6;
   cursor: not-allowed;
+}
+
+select::-ms-expand {
+  display: none;
 }
 
 .role-select {
@@ -1665,32 +1691,61 @@ select:disabled {
 
 select option {
   padding: 8px;
+  background: #fff;
+  color: var(--text);
+}
+
+/* Themed scrollbars (Firefox + WebKit/Chromium). */
+html {
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+  scrollbar-width: thin;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(27, 74, 122, 0.42) transparent;
+  scrollbar-color: var(--scroll-thumb) transparent;
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--scroll-track);
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(27, 74, 122, 0.34);
-  border: 2px solid transparent;
+  background: linear-gradient(
+    180deg,
+    rgba(27, 74, 122, 0.45),
+    rgba(14, 42, 71, 0.4)
+  );
+  border: 3px solid transparent;
   border-radius: 999px;
   background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(27, 74, 122, 0.55);
+  background: linear-gradient(
+    180deg,
+    rgba(27, 74, 122, 0.7),
+    rgba(14, 42, 71, 0.65)
+  );
   background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Long dropdown / dialog lists get the stronger scrollbar track. */
+.vehicle-picker-list,
+.person-bookings,
+.notif-list,
+.dialog {
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
 }
 
 /* ------------------------------------------------------------ nav groups */
