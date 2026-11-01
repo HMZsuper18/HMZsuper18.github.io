@@ -19,6 +19,15 @@ export function mapError(error) {
   const upper = message.toUpperCase();
 
   if (upper.includes('NOT_ALLOWED') || upper.includes('NOT_ADMIN')) return PERMISSION_ERROR;
+  if (upper.includes('ROUTE_EDIT_CONFLICT') || upper.includes('STOP_IN_USE')) {
+    return 'لا يمكن حفظ التعديل لتعارضه مع حجوزات قائمة (ترتيب المحطات أو المقاعد).';
+  }
+  if (upper.includes('ROUTE_SEAT_CONFLICT')) {
+    return 'لا يمكن تقليل سعة المركبة عن مقعد محجوز.';
+  }
+  if (upper.includes('ROUTE_STOPS_REQUIRED') || upper.includes('DUPLICATE_STOP')) {
+    return 'أضف محطتين على الأقل بدون تكرار.';
+  }
   if (upper.includes('CANNOT_CHANGE_SELF')) return 'لا يمكنك تغيير دور حسابك بنفسك.';
   if (upper.includes('USER_NOT_FOUND')) return 'لا يوجد حساب بهذا المعرّف.';
   if (upper.startsWith('INVALID_ROLE')) return 'قيمة الدور غير صحيحة.';
@@ -578,26 +587,15 @@ export async function fetchRouteStops(routeId) {
 }
 
 export async function replaceRouteStops(routeId, stops) {
-  const { error: deleteError } = await supabase
-    .from('route_stops')
-    .delete()
-    .eq('route_id', routeId);
-  if (deleteError) throw new Error(mapError(deleteError));
-  if (!stops.length) return;
-
-  const { error } = await supabase.from('route_stops').insert(
-    stops.map((stop, index) => ({
-      route_id: routeId,
-      seq: index + 1,
-      name: stop.name,
-      price: stop.price,
-      governorate: stop.governorate || null,
+  const { error } = await supabase.rpc('admin_replace_route_stops', {
+    p_route_id: routeId,
+    p_stops: stops.map((stop) => ({
+      id: stop.id ?? null,
       station_id: stop.station_id ?? null,
-      latitude: stop.latitude ?? null,
-      longitude: stop.longitude ?? null,
-      maps_url: stop.maps_url || null,
-      description: stop.description || null,
+      name: stop.name,
+      governorate: stop.governorate || null,
+      price: stop.price,
     })),
-  );
+  });
   if (error) throw new Error(mapError(error));
 }

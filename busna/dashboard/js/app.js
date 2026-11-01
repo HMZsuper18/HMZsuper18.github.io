@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261101s';
+import * as api from './api.js?v=20261101t';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -1014,7 +1014,7 @@ function stationOptions(selectedId) {
 
 function graphNodeHtml(node, index) {
   return `
-    <div class="graph-node" data-graph-node>
+    <div class="graph-node" data-graph-node data-stop-id="${node.stopId ?? ''}">
       <div class="graph-node-head">
         <span class="graph-node-index">${index + 1}</span>
         <div class="graph-node-actions">
@@ -1049,6 +1049,7 @@ function readGraph() {
   if (!graph) return { nodes: [], edges: [] };
   const nodes = $$('[data-graph-node]', graph).map((node) => ({
     stationId: node.querySelector('.node-station')?.value || '',
+    stopId: node.dataset.stopId || null,
   }));
   const edges = $$('[data-graph-edge]', graph).map(
     (edge) => Number(edge.querySelector('.edge-price')?.value) || 0,
@@ -1060,7 +1061,9 @@ function writeGraph(data) {
   const graph = $('#route-graph');
   if (!graph) return;
 
-  const nodes = data.nodes.length ? data.nodes : [{ stationId: '' }];
+  const nodes = data.nodes.length
+    ? data.nodes
+    : [{ stationId: '', stopId: null }];
   const edges = data.edges.slice(0, Math.max(0, nodes.length - 1));
   while (edges.length < nodes.length - 1) edges.push(0);
 
@@ -1089,7 +1092,10 @@ function resolveStationId(stop) {
 }
 
 function renderRouteGraph(stops) {
-  const nodes = stops.map((stop) => ({ stationId: resolveStationId(stop) }));
+  const nodes = stops.map((stop) => ({
+    stationId: resolveStationId(stop),
+    stopId: stop.id,
+  }));
   const edges = stops.slice(1).map((stop, index) => {
     const previous = Number(stops[index].price) || 0;
     const current = Number(stop.price) || 0;
@@ -1100,7 +1106,9 @@ function renderRouteGraph(stops) {
 
 function addRouteNode() {
   const data = readGraph();
-  const nodes = data.nodes.length ? data.nodes : [{ stationId: '' }];
+  const nodes = data.nodes.length
+    ? data.nodes
+    : [{ stationId: '', stopId: null }];
   const edges = data.edges.slice();
   if (nodes.length > 0) edges.push(0);
   nodes.push({ stationId: '' });
@@ -1199,7 +1207,7 @@ function collectRouteStops() {
     const station = state.stations.find(
       (item) => String(item.id) === String(node.stationId),
     );
-    return { station, stationId: node.stationId };
+    return { station, stationId: node.stationId, stopId: node.stopId };
   });
   if (nodes.some((node) => !node.station)) {
     throw new Error('اختر محطة لكل عقدة في الرسم.');
@@ -1213,6 +1221,7 @@ function collectRouteStops() {
   return nodes.map((node, index) => {
     if (index > 0) cumulative += Math.max(0, Number(data.edges[index - 1]) || 0);
     return {
+      id: node.stopId,
       station_id: node.station.id,
       code: node.station.code,
       name: node.station.name,
