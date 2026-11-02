@@ -254,7 +254,7 @@ export async function deleteGovernorate(code) {
 export async function fetchStations() {
   const { data, error } = await supabase
     .from('stations')
-    .select('id, code, name, governorate, latitude, longitude, is_active, created_at')
+    .select('id, code, name, governorate, latitude, longitude, maps_url, is_active, created_at')
     .order('governorate')
     .order('name');
   if (error) throw new Error(mapError(error));
@@ -598,4 +598,27 @@ export async function replaceRouteStops(routeId, stops) {
     })),
   });
   if (error) throw new Error(mapError(error));
+}
+
+/**
+ * Passengers occupying each seat on a route/day, for the dashboard seat map.
+ * Claimed tickets show the claimant as the passenger; the owner is kept as a
+ * fallback for unclaimed tickets.
+ */
+export async function fetchRouteSeatBookings(routeId, travelDate) {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(
+      'id, seat_num, status, payment_method, paid, boarding_seq, alighting_seq, ' +
+        'owner:users!bookings_user_id_fkey(full_name, phone), ' +
+        'claimant:users!bookings_claimed_by_fkey(full_name, phone), ' +
+        'boarding:route_stops!bookings_boarding_stop_id_fkey(name), ' +
+        'alighting:route_stops!bookings_alighting_stop_id_fkey(name)',
+    )
+    .eq('route_id', routeId)
+    .eq('travel_date', travelDate)
+    .neq('status', 'cancelled')
+    .order('seat_num');
+  if (error) throw new Error(mapError(error));
+  return data || [];
 }

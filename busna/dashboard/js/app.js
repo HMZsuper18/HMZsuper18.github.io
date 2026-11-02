@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261101u';
+import * as api from './api.js?v=20261102b';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -27,6 +27,9 @@ const state = {
     users: { search: '', governorate: '', role: '', minCompliance: '' },
     inspectors: { search: '', governorate: '', minCompliance: '' },
   },
+  routeSeatActive: null,
+  routeSeatDate: '',
+  routeSeatRequest: 0,
   earningsRange: 'day',
   statsRange: 'day',
   earnings: [],
@@ -1340,7 +1343,8 @@ function renderRoutes() {
   body.innerHTML = state.routes
     .map(
       (route) => `
-      <tr>
+      <tr class="route-row" data-route-seats="${route.id}" tabindex="0"
+          title="عرض مخطط مقاعد المركبة">
         <td><code>${escapeHtml(route.code)}</code></td>
         <td>${escapeHtml(route.origin)} ← ${escapeHtml(route.destination)}</td>
         <td>${formatTripDate(route.trip_date)}</td>
@@ -1360,10 +1364,11 @@ function renderRoutes() {
               </span>`}
         </td>
         <td class="row-actions">
+          <button class="btn btn-mini" data-open-seats="${route.id}" type="button">المقاعد</button>
           ${canManage
             ? `<button class="btn btn-mini" data-edit-route="${route.id}" type="button">تعديل</button>
                <button class="btn btn-mini btn-danger-ghost" data-delete-route="${route.id}" type="button">حذف</button>`
-            : '<span class="muted small">—</span>'}
+            : ''}
         </td>
       </tr>`,
     )
@@ -1932,6 +1937,141 @@ function updateVehicleSeatPreview() {
   );
 }
 
+function localIsoDate(date = new Date()) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
+
+function paymentTypeLabel(method) {
+  if (method === 'subscription') return 'اشتراك';
+  if (method === 'app') return 'تطبيق';
+  return 'كاش';
+}
+
+function routeSeatPassenger(booking) {
+  const person = booking.claimant || booking.owner || {};
+  return person.full_name || 'مستخدم';
+}
+
+function routeSeatTooltip(bookings) {
+  return bookings
+    .map((booking) => {
+      const person = booking.claimant || booking.owner || {};
+      const phone = person.phone || 'بدون هاتف';
+      const paid = booking.paid ? 'مدفوع' : 'غير مدفوع';
+      const segment =
+        booking.boarding?.name && booking.alighting?.name
+          ? ` • ${booking.boarding.name} ← ${booking.alighting.name}`
+          : '';
+      return `${routeSeatPassenger(booking)} — ${phone} — ${paymentTypeLabel(
+        booking.payment_method,
+      )} (${paid})${segment}`;
+    })
+    .join(' | ');
+}
+
+function renderRouteSeatMap(route, bookings) {
+  const box = $('#route-seats-map');
+  if (!box) return;
+
+  const total = Math.max(1, Math.min(60, Number(route.seats) || 1));
+  const rows = buildSeatRows(route.vehicle_type || 'bus', total);
+  const bySeat = new Map();
+  for (const booking of bookings) {
+    const seat = Number(booking.seat_num);
+    if (!Number.isInteger(seat)) continue;
+    if (!bySeat.has(seat)) bySeat.set(seat, []);
+    bySeat.get(seat).push(booking);
+  }
+
+  const seatRows = rows
+    .map((row, rowIndex) => {
+      const driver =
+        route.vehicle_type !== 'bus' && rowIndex === 0
+          ? '<span class="seat-driver-inline" title="السائق"><img src="assets/steering-wheel.svg" alt=""></span>'
+          : '';
+      return `
+        <div class="seat-row">
+          ${driver}
+          ${row
+            .map((cell) => {
+              if (cell.gap) return '<span class="seat-gap"></span>';
+              const seatBookings = bySeat.get(cell.seat) || [];
+              const info = seatBookings.length
+                ? routeSeatTooltip(seatBookings)
+                : 'متاح';
+              const classes = ['seat-cell', `seat-${cell.kind}`];
+              if (seatBookings.length) classes.push('is-booked');
+              if (seatBookings.length > 1) classes.push('is-multi');
+              return `<span class="${classes.join(' ')}"
+                            title="${escapeHtml(info)}"
+                            aria-label="مقعد ${cell.seat}: ${escapeHtml(info)}">
+                        ${cell.seat}
+                        ${seatBookings.length ? '<i class="seat-booked-dot"></i>' : ''}
+                      </span>`;
+            })
+            .join('')}
+        </div>`;
+    })
+    .join('');
+  const driver =
+    route.vehicle_type === 'bus'
+      ? `<div class="seat-driver">
+          <img src="assets/steering-wheel.svg" alt="">
+          <span>السائق</span>
+        </div>`
+      : '';
+
+  const occupied = bySeat.size;
+  $('#route-seats-meta').textContent =
+    `${route.code} • ${route.origin} ← ${route.destination} • ` +
+    `${vehicleLabel(route.vehicle_type)} • ${formatTripDate(state.routeSeatDate)} • ` +
+    `${num.format(occupied)} / ${num.format(total)} مقعد محجوز`;
+
+  box.innerHTML = `
+    <div class="seat-preview-head">
+      <strong>${vehicleLabel(route.vehicle_type)} · ${total} مقعد</strong>
+      <span class="seat-legend">
+        <i class="seat-dot seat-window"></i> شباك
+        <i class="seat-dot seat-middle"></i> أوسط
+        <i class="seat-dot seat-aisle"></i> ممر
+        <i class="seat-dot seat-booked"></i> محجوز
+      </span>
+    </div>
+    <div class="seat-vehicle">
+      ${driver}
+      <div class="seat-rows">${seatRows}</div>
+    </div>`;
+}
+
+async function loadRouteSeatBookings() {
+  const route = state.routeSeatActive;
+  const date = state.routeSeatDate;
+  if (!route || !date) return;
+
+  const request = ++state.routeSeatRequest;
+  const box = $('#route-seats-map');
+  box.innerHTML = '<p class="empty">جارٍ تحميل بيانات المقاعد…</p>';
+  try {
+    const rows = await api.fetchRouteSeatBookings(route.id, date);
+    if (request !== state.routeSeatRequest) return;
+    renderRouteSeatMap(route, rows);
+  } catch (error) {
+    if (request !== state.routeSeatRequest) return;
+    box.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+function openRouteSeatDialog(route) {
+  state.routeSeatActive = route;
+  state.routeSeatDate = route.trip_date || localIsoDate();
+  const dateInput = $('#route-seats-date');
+  if (dateInput) dateInput.value = state.routeSeatDate;
+  const title = $('#route-seats-title');
+  if (title) title.textContent = `مقاعد المسار ${route.code}`;
+  const dialog = $('#route-seats-dialog');
+  if (dialog && !dialog.open) dialog.showModal();
+  loadRouteSeatBookings();
+}
 
 async function openRouteDialog(route = null) {
   const form = $('#route-form');
@@ -2145,7 +2285,13 @@ function renderStations() {
       (station) => `
       <tr>
         <td><code>${escapeHtml(station.code)}</code></td>
-        <td>${escapeHtml(station.name)}</td>
+        <td>
+          ${escapeHtml(station.name)}
+          ${station.maps_url
+            ? `<a class="muted small" href="${escapeHtml(station.maps_url)}"
+                   target="_blank" rel="noopener">خريطة</a>`
+            : ''}
+        </td>
         <td>${escapeHtml(governorateLabel(station.governorate))}</td>
         <td>
           ${canManage
@@ -2215,6 +2361,7 @@ async function openStationDialog(station = null) {
     form.code.value = station.code;
     form.name.value = station.name;
     form.governorate.value = station.governorate;
+    form.maps_url.value = station.maps_url ?? '';
     form.latitude.value = station.latitude ?? '';
     form.longitude.value = station.longitude ?? '';
     form.is_active.checked = Boolean(station.is_active);
@@ -2233,6 +2380,7 @@ async function saveStation(event) {
     code: form.code.value.trim().toUpperCase(),
     name: form.name.value.trim(),
     governorate: form.governorate.value,
+    maps_url: form.maps_url.value.trim(),
     latitude: Number(form.latitude.value),
     longitude: Number(form.longitude.value),
     is_active: form.is_active.checked,
@@ -3870,10 +4018,25 @@ function bindStatic() {
     });
   });
 
+  const routeSeatsDate = $('#route-seats-date');
+  if (routeSeatsDate) {
+    routeSeatsDate.addEventListener('change', () => {
+      state.routeSeatDate = routeSeatsDate.value;
+      loadRouteSeatBookings();
+    });
+  }
+
   $('#routes-body').addEventListener('click', async (event) => {
+    const seats = event.target.closest('[data-open-seats]');
     const edit = event.target.closest('[data-edit-route]');
     const remove = event.target.closest('[data-delete-route]');
     const toggle = event.target.closest('[data-toggle-route]');
+
+    if (seats) {
+      const route = state.routes.find((item) => String(item.id) === seats.dataset.openSeats);
+      if (route) openRouteSeatDialog(route);
+      return;
+    }
 
     if (edit) {
       const route = state.routes.find((item) => String(item.id) === edit.dataset.editRoute);
@@ -3906,7 +4069,23 @@ function bindStatic() {
         $('#routes-error').textContent = error.message;
         $('#routes-error').classList.remove('hidden');
       }
+      return;
     }
+
+    const row = event.target.closest('[data-route-seats]');
+    if (row && !event.target.closest('button, a, input, select')) {
+      const route = state.routes.find((item) => String(item.id) === row.dataset.routeSeats);
+      if (route) openRouteSeatDialog(route);
+    }
+  });
+
+  $('#routes-body').addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const row = event.target.closest('[data-route-seats]');
+    if (!row) return;
+    event.preventDefault();
+    const route = state.routes.find((item) => String(item.id) === row.dataset.routeSeats);
+    if (route) openRouteSeatDialog(route);
   });
 
   $('#stations-body').addEventListener('click', async (event) => {

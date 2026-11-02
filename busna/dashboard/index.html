@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>باصنا | لوحة التحكم</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="stylesheet" href="css/app.css?v=20261101u">
+  <link rel="stylesheet" href="css/app.css?v=20261102b">
 </head>
 <body>
 
@@ -685,6 +685,12 @@
         <span>اسم المحطة</span>
         <input name="name" type="text" required maxlength="80" autocomplete="off">
       </label>
+      <label class="field field-full">
+        <span>رابط موقع المحطة في خرائط جوجل</span>
+        <input name="maps_url" type="url" required maxlength="500"
+               placeholder="https://maps.app.goo.gl/…" autocomplete="off" dir="ltr">
+      </label>
+      <span class="hint muted">افتح المكان في خرائط جوجل، اضغط «مشاركة» ثم انسخ الرابط والصقه هنا.</span>
       <div class="field-grid">
         <label class="field">
           <span>خط العرض (Latitude)</span>
@@ -831,6 +837,23 @@
         <button type="submit" class="btn btn-primary" id="btn-save-route">حفظ</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- ------------------------------------------------- route seats dialog -->
+  <dialog id="route-seats-dialog" class="dialog dialog-wide">
+    <h2 id="route-seats-title">مخطط مقاعد المسار</h2>
+    <p id="route-seats-meta" class="muted small"></p>
+    <label class="field">
+      <span>تاريخ الرحلة</span>
+      <input type="date" id="route-seats-date">
+    </label>
+    <div id="route-seats-map" class="seat-preview" aria-live="polite"></div>
+    <p class="hint muted">
+      مرّر مؤشر الفأرة على أي مقعد محجوز لعرض اسم الراكب ورقم هاتفه وطريقة الدفع.
+    </p>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-ghost" data-close="route-seats-dialog">إغلاق</button>
+    </div>
   </dialog>
 
   <!-- -------------------------------------------------- inspector dialog -->
@@ -996,6 +1019,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="js/vendor/chart.umd.min.js?v=20261031b"></script>
-  <script type="module" src="js/app.js?v=20261101u"></script>
+  <script type="module" src="js/app.js?v=20261102b"></script>
 </body>
 </html>

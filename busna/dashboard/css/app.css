@@ -1583,6 +1583,7 @@ tr.is-unread td {
 }
 
 .seat-cell {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1593,6 +1594,52 @@ tr.is-unread td {
   font-weight: 800;
   color: var(--navy);
   border: 1px solid rgba(14, 42, 71, 0.18);
+  cursor: help;
+}
+
+.seat-cell.is-booked {
+  color: #fff;
+  background: var(--success);
+  border-color: #268f43;
+}
+
+.seat-cell.is-booked.is-multi {
+  box-shadow: 0 0 0 2px var(--warning);
+}
+
+.seat-booked-dot {
+  position: absolute;
+  top: 2px;
+  inset-inline-end: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.seat-dot.seat-booked {
+  background: var(--success);
+}
+
+.route-row {
+  cursor: pointer;
+}
+
+.route-row:hover td {
+  background: rgba(14, 42, 71, 0.045);
+}
+
+.route-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+#route-seats-map .seat-vehicle {
+  max-height: 420px;
+}
+
+#route-seats-meta {
+  margin: 2px 0 12px;
 }
 
 .seat-window {
