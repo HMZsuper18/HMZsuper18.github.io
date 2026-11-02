@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>باصنا | فتح التذكرة</title>
+  <style>
+    :root {
+      --navy: #0e2a47;
+      --cream: #fbf7ee;
+      --surface: #fffdf8;
+      --accent: #2e7dd1;
+      --muted: #5b6b7c;
+      --border: #e3dbc9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: var(--cream);
+      color: var(--navy);
+      font-family: Tajawal, "Segoe UI", system-ui, sans-serif;
+      text-align: center;
+    }
+    .card {
+      width: min(440px, 100%);
+      padding: 28px 22px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: 0 18px 48px rgba(16, 35, 58, 0.08);
+    }
+    .logo {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(46, 125, 209, 0.12);
+      font-size: 30px;
+    }
+    h1 { margin: 0 0 8px; font-size: 1.45rem; }
+    p { margin: 0 0 10px; color: var(--muted); line-height: 1.7; }
+    .hint { font-size: 0.86rem; }
+    .actions { display: grid; gap: 10px; margin-top: 20px; }
+    a.btn {
+      display: block;
+      padding: 12px 16px;
+      border-radius: 14px;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    a.primary { background: var(--navy); color: #fff; }
+    a.ghost { color: var(--navy); border: 1px solid var(--border); }
+    code {
+      direction: ltr;
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: var(--cream);
+      font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="card" id="share">
+    <div class="logo" aria-hidden="true">🎫</div>
+    <h1 id="title">تذكرة باصنا</h1>
+    <p id="message">جارٍ تجهيز رابط التذكرة…</p>
+    <div class="actions" id="actions" hidden>
+      <a class="btn primary" id="open-app" href="#">فتح التطبيق</a>
+      <a class="btn ghost" href="https://drive.google.com/open?id=12zfMNm2iRFcxKYEkI92h9-drSU4BkjEg"
+         target="_blank" rel="noopener">تحميل تطبيق باصنا</a>
+      <a class="btn ghost" href="https://hmzsuper18.github.io/busna/">الصفحة الرئيسية</a>
+    </div>
+    <p class="hint" id="hint" hidden>
+      إذا لم يفتح التطبيق تلقائياً، ثبّته أولاً من زر التحميل ثم أعد فتح الرابط.
+    </p>
+  </main>
+
+  <script>
+    (function () {
+      var match = window.location.pathname.match(
+        /\/busna\/t\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\/?$/
+      );
+      if (!match) {
+        document.getElementById('title').textContent = 'الصفحة غير موجودة';
+        document.getElementById('message').textContent =
+          'الرابط الذي فتحته غير صحيح أو لم يعد متاحاً.';
+        var actions = document.getElementById('actions');
+        actions.hidden = false;
+        document.getElementById('open-app').style.display = 'none';
+        return;
+      }
+
+      var token = match[1];
+      var app = 'com.hamzah.busna://ticket/' + token;
+      document.getElementById('open-app').href = app;
+      document.getElementById('actions').hidden = false;
+      document.getElementById('hint').hidden = false;
+      document.getElementById('message').textContent =
+        'افتح التذكرة داخل تطبيق باصنا لعرض رمز QR.';
+      if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        window.setTimeout(function () {
+          window.location.href = app;
+        }, 500);
+      }
+    })();
+  </script>
+</body>
+</html>

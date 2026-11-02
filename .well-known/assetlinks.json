@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.hamzah.busna",
+      "sha256_cert_fingerprints": [
+        "A6:CC:B2:D2:70:30:1E:FE:27:FA:03:FF:AF:D0:9A:36:6D:12:AE:E9:6B:3C:9C:CC:EF:45:31:A3:29:9B:F3:70"
+      ]
+    }
+  }
+]
