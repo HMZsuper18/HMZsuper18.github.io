@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>باصنا | لوحة التحكم</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="stylesheet" href="css/app.css?v=20261102b">
+  <link rel="stylesheet" href="css/app.css?v=20261103a">
 </head>
 <body>
 
@@ -370,6 +370,7 @@
                 <th>الهاتف</th>
                 <th>المحافظة</th>
                 <th>الامتثال</th>
+                <th>الجزاء</th>
                 <th>آخر 5 تذاكر</th>
                 <th>حساب التطبيق</th>
                 <th>التفعيل</th>
@@ -560,7 +561,7 @@
               </tr>
             </thead>
             <tbody id="users-body">
-              <tr><td colspan="7" class="empty">جارٍ التحميل…</td></tr>
+              <tr><td colspan="8" class="empty">جارٍ التحميل…</td></tr>
             </tbody>
           </table>
         </div>
@@ -989,6 +990,32 @@
     </div>
   </dialog>
 
+  <!-- --------------------------------------------------------- penalty dialog -->
+  <dialog id="penalty-dialog" class="dialog penalty-dialog">
+    <div class="penalty-panel">
+      <header class="penalty-head">
+        <div class="penalty-title">
+          <span id="penalty-dialog-dot" class="penalty-dot penalty-green" aria-hidden="true"></span>
+          <div>
+            <h2 id="penalty-dialog-title">جزاء عدم الحضور</h2>
+            <p id="penalty-dialog-user" class="muted small"></p>
+          </div>
+        </div>
+        <button type="button" class="btn btn-ghost btn-mini" data-close="penalty-dialog">إغلاق</button>
+      </header>
+      <div class="penalty-status-row">
+        <span id="penalty-dialog-badge" class="badge penalty-pill penalty-green">أخضر — لا جزاء</span>
+      </div>
+      <p id="penalty-dialog-meaning" class="penalty-explain"></p>
+      <p id="penalty-dialog-count" class="penalty-count"></p>
+      <div id="penalty-dialog-error" class="banner banner-danger hidden"></div>
+      <div class="penalty-actions">
+        <p id="penalty-dialog-hint" class="muted small"></p>
+        <button id="btn-forgive-penalty" class="btn btn-primary" type="button">مسامحة</button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- ---------------------------------------------------------- plan dialog -->
   <dialog id="plan-dialog" class="dialog">
     <form id="plan-form" method="dialog">
@@ -1019,6 +1046,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="js/vendor/chart.umd.min.js?v=20261031b"></script>
-  <script type="module" src="js/app.js?v=20261102b"></script>
+  <script type="module" src="js/app.js?v=20261103a"></script>
 </body>
 </html>

@@ -583,6 +583,133 @@ button.badge {
   margin: 10px 0 0;
 }
 
+
+/* ------------------------------------------------------- penalty circles */
+
+.penalty-cell {
+  width: 58px;
+  text-align: center;
+}
+
+.penalty-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #b9c3cd;
+  box-shadow: 0 0 0 1px rgba(16, 35, 58, 0.16);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+button.penalty-dot:hover {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 3px rgba(46, 125, 209, 0.2);
+}
+
+.penalty-dot.penalty-green {
+  background: #2f9e5f;
+}
+
+.penalty-dot.penalty-red {
+  background: #d64545;
+}
+
+.penalty-dot.penalty-black {
+  background: #161616;
+  border-color: #fbf7ee;
+  box-shadow: 0 0 0 1px rgba(16, 35, 58, 0.46);
+}
+
+.penalty-panel {
+  padding: 26px;
+}
+
+.penalty-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.penalty-title {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.penalty-title h2 {
+  margin: 0 0 3px;
+}
+
+.penalty-title p {
+  margin: 0;
+}
+
+.penalty-title .penalty-dot {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  cursor: default;
+}
+
+.penalty-title .penalty-dot:hover {
+  transform: none;
+}
+
+.penalty-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.penalty-pill.penalty-green {
+  background: rgba(47, 158, 95, 0.14);
+  color: #1e7344;
+}
+
+.penalty-pill.penalty-red {
+  background: rgba(214, 69, 69, 0.13);
+  color: #a52f2f;
+}
+
+.penalty-pill.penalty-black {
+  background: rgba(22, 22, 22, 0.1);
+  color: #161616;
+}
+
+.penalty-explain {
+  margin: 14px 0 0;
+  line-height: 1.8;
+  color: var(--muted);
+}
+
+.penalty-count {
+  margin: 8px 0 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.penalty-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.penalty-actions .muted {
+  margin: 0;
+  max-width: 260px;
+}
+
 /* ---------------------------------------------------------------- dialog */
 
 .dialog {

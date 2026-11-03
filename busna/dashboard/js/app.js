@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261102b';
+import * as api from './api.js?v=20261103a';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -2978,6 +2978,37 @@ async function saveInspector(event) {
 
 // ------------------------------------------------------------------- users --
 
+const PENALTY_META = {
+  green: {
+    label: 'أخضر — لا جزاء',
+    meaning:
+      'لا يوجد جزاء نشط. المستخدم يستطيع الحجز النقدي بالمقاعد المتاحة له.',
+  },
+  red: {
+    label: 'أحمر — غياب واحد',
+    meaning:
+      'غياب واحد عن رحلة نقدية خلال آخر 30 يومًا. الحد الأقصى للحجز النقدي مقعد واحد في اليوم.',
+  },
+  black: {
+    label: 'أسود — غيابان أو أكثر',
+    meaning:
+      'غيابان أو أكثر عن رحلات نقدية خلال آخر 30 يومًا. الحجز النقدي موقوف مؤقتًا.',
+  },
+};
+
+let penaltyUserId = null;
+
+function penaltyStatusOf(user) {
+  const status = user?.penalty_status;
+  return status === 'red' || status === 'black' ? status : 'green';
+}
+
+function penaltyButton(user) {
+  const status = penaltyStatusOf(user);
+  const meta = PENALTY_META[status];
+  return `<button class="penalty-dot penalty-${status}" data-penalty-user="${user.id}" type="button" title="${escapeHtml(meta.label)}" aria-label="${escapeHtml(meta.label)}"></button>`;
+}
+
 async function loadUsers(trigger = null) {
   const errorBox = $('#users-error');
   errorBox.classList.add('hidden');
@@ -3006,7 +3037,7 @@ function renderUsers() {
     : api.ADMIN_ROLE_OPTIONS;
 
   if (!state.people.users.length) {
-    body.innerHTML = '<tr><td colspan="7" class="empty">لا يوجد مستخدمون مطابقون.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" class="empty">لا يوجد مستخدمون مطابقون.</td></tr>';
     return;
   }
 
@@ -3040,6 +3071,7 @@ function renderUsers() {
           <td>${escapeHtml(user.phone || '—')}</td>
           <td>${governorateLabel(user.governorate)}</td>
           <td>${compliance}</td>
+          <td class="penalty-cell">${penaltyButton(user)}</td>
           <td><button class="btn btn-mini" data-person="${user.id}" type="button">عرض</button></td>
           <td>${roleCell}</td>
           <td class="row-actions">
@@ -3091,6 +3123,83 @@ async function deleteUserAccount(userId) {
   } catch (error) {
     $('#users-error').textContent = error.message;
     $('#users-error').classList.remove('hidden');
+  }
+}
+
+function openPenaltyDialog(userId) {
+  const user = state.people.users.find((item) => item.id === userId);
+  if (!user) return;
+  penaltyUserId = userId;
+  $('#penalty-dialog-error').classList.add('hidden');
+  renderPenaltyDialog(user);
+  const dialog = $('#penalty-dialog');
+  if (!dialog.open) dialog.showModal();
+}
+
+function renderPenaltyDialog(user) {
+  const status = penaltyStatusOf(user);
+  const meta = PENALTY_META[status];
+  const count = Number(user.penalty_count || 0);
+  const forgiven = Number(user.forgiven_count || 0);
+
+  $('#penalty-dialog-title').textContent = 'جزاء عدم الحضور';
+  $('#penalty-dialog-user').textContent =
+    `${user.full_name || 'مستخدم'} · ${user.email || 'بدون بريد'} · ` +
+    `${governorateLabel(user.governorate)}`;
+  $('#penalty-dialog-dot').className = `penalty-dot penalty-${status}`;
+  $('#penalty-dialog-badge').className = `badge penalty-pill penalty-${status}`;
+  $('#penalty-dialog-badge').textContent = meta.label;
+  $('#penalty-dialog-meaning').textContent = meta.meaning;
+  $('#penalty-dialog-count').textContent = count
+    ? `الغيابات النشطة: ${num.format(count)} · تمت مسامحة ${num.format(forgiven)} سابقًا.`
+    : forgiven
+      ? `لا توجد غيابات نشطة · تمت مسامحة ${num.format(forgiven)} سابقًا.`
+      : 'لا توجد غيابات نشطة.';
+
+  const button = $('#btn-forgive-penalty');
+  const hint = $('#penalty-dialog-hint');
+  if (status === 'green') {
+    button.hidden = true;
+    hint.textContent = 'لا حاجة لمسامحة.';
+  } else if (!state.session?.canManage) {
+    button.hidden = true;
+    hint.textContent = 'المسامحة متاحة للمدير فقط.';
+  } else {
+    button.hidden = false;
+    button.disabled = false;
+    button.textContent = status === 'black' ? 'مسامحة ← أحمر' : 'مسامحة ← أخضر';
+    hint.textContent =
+      status === 'black'
+        ? 'بعد المسامحة سيصبح الجزاء أحمر.'
+        : 'بعد المسامحة سيُزال الجزاء نهائيًا.';
+  }
+}
+
+async function forgivePenalty() {
+  const user = state.people.users.find((item) => item.id === penaltyUserId);
+  if (!user) return;
+  const button = $('#btn-forgive-penalty');
+  const errorBox = $('#penalty-dialog-error');
+  errorBox.classList.add('hidden');
+  button.disabled = true;
+  button.textContent = 'جارٍ المسامحة…';
+
+  try {
+    const updated = await api.forgivePenalty(user.id);
+    Object.assign(user, {
+      penalty_count: Number(updated.penalty_count || 0),
+      forgiven_count: Number(updated.forgiven_count || 0),
+      penalty_status: updated.penalty_status || 'green',
+    });
+    renderUsers();
+    renderPenaltyDialog(user);
+    toast('تمت المسامحة وتحديث الجزاء.');
+  } catch (error) {
+    errorBox.textContent = error.message;
+    errorBox.classList.remove('hidden');
+    button.disabled = false;
+    button.textContent =
+      penaltyStatusOf(user) === 'black' ? 'مسامحة ← أحمر' : 'مسامحة ← أخضر';
   }
 }
 
@@ -4267,9 +4376,16 @@ function bindStatic() {
     if (save) saveUserRole(save.dataset.saveRole);
     const remove = event.target.closest('[data-delete-user]');
     if (remove) deleteUserAccount(remove.dataset.deleteUser);
+    const penalty = event.target.closest('[data-penalty-user]');
+    if (penalty) {
+      openPenaltyDialog(penalty.dataset.penaltyUser);
+      return;
+    }
     const person = event.target.closest('[data-person]');
     if (person) openPersonBookings(person.dataset.person);
   });
+
+  $('#btn-forgive-penalty').addEventListener('click', forgivePenalty);
 
   $('#inspectors-body').addEventListener('click', (event) => {
     const person = event.target.closest('[data-person]');

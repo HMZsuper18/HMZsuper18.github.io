@@ -29,6 +29,7 @@ export function mapError(error) {
     return 'أضف محطتين على الأقل بدون تكرار.';
   }
   if (upper.includes('CANNOT_CHANGE_SELF')) return 'لا يمكنك تغيير دور حسابك بنفسك.';
+  if (upper.includes('NO_ACTIVE_PENALTY')) return 'لا يوجد جزاء نشط لهذا المستخدم.';
   if (upper.includes('USER_NOT_FOUND')) return 'لا يوجد حساب بهذا المعرّف.';
   if (upper.startsWith('INVALID_ROLE')) return 'قيمة الدور غير صحيحة.';
   if (code === '42501' || message.includes('permission denied')) return PERMISSION_ERROR;
@@ -395,6 +396,15 @@ export async function deleteUser(userId) {
     p_user_id: userId,
   });
   if (error) throw new Error(mapError(error));
+}
+
+// Forgive one no-show penalty step: black -> red, red -> green.
+export async function forgivePenalty(userId) {
+  const { data, error } = await supabase.rpc('admin_forgive_penalty', {
+    p_user_id: userId,
+  });
+  if (error) throw new Error(mapError(error));
+  return data?.[0] || { penalty_count: 0, forgiven_count: 0, penalty_status: 'green' };
 }
 
 // ------------------------------------------------------------------- tools --
