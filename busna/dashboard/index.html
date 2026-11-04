@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>باصنا | لوحة التحكم</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="stylesheet" href="css/app.css?v=20261103a">
+  <link rel="stylesheet" href="css/app.css?v=20261103b">
 </head>
 <body>
 
@@ -854,7 +854,29 @@
     </p>
     <div class="dialog-actions">
       <button type="button" class="btn btn-ghost" data-close="route-seats-dialog">إغلاق</button>
+      <button type="button" class="btn btn-primary" id="btn-delay-trip">تأخير الرحلة</button>
     </div>
+  </dialog>
+
+  <!-- ----------------------------------------------------- delay trip dialog -->
+  <dialog id="trip-delay-dialog" class="dialog">
+    <form id="trip-delay-form" method="dialog">
+      <h2>تأخير الرحلة</h2>
+      <p id="trip-delay-meta" class="muted small"></p>
+      <label class="field">
+        <span>مدة التأخير بالدقائق</span>
+        <input name="minutes" type="number" min="1" max="600" value="15" required>
+      </label>
+      <label class="field field-full">
+        <span>سبب التأخير (اختياري)</span>
+        <textarea name="note" rows="3" maxlength="200"></textarea>
+      </label>
+      <p class="error hidden" data-error-for="delay"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close="trip-delay-dialog">إلغاء</button>
+        <button type="submit" class="btn btn-primary" id="btn-save-trip-delay">تأخير وإرسال التنبيه</button>
+      </div>
+    </form>
   </dialog>
 
   <!-- -------------------------------------------------- inspector dialog -->
@@ -1046,6 +1068,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="js/vendor/chart.umd.min.js?v=20261031b"></script>
-  <script type="module" src="js/app.js?v=20261103a"></script>
+  <script type="module" src="js/app.js?v=20261103b"></script>
 </body>
 </html>

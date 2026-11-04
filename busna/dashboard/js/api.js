@@ -30,6 +30,8 @@ export function mapError(error) {
   }
   if (upper.includes('CANNOT_CHANGE_SELF')) return 'لا يمكنك تغيير دور حسابك بنفسك.';
   if (upper.includes('NO_ACTIVE_PENALTY')) return 'لا يوجد جزاء نشط لهذا المستخدم.';
+  if (upper.includes('NOT_INSPECTOR')) return 'لا تملك صلاحية تعديل حالة الرحلة.';
+  if (upper.includes('NOT_YOUR_ROUTE')) return 'هذه الرحلة غير مسندة إليك.';
   if (upper.includes('USER_NOT_FOUND')) return 'لا يوجد حساب بهذا المعرّف.';
   if (upper.startsWith('INVALID_ROLE')) return 'قيمة الدور غير صحيحة.';
   if (code === '42501' || message.includes('permission denied')) return PERMISSION_ERROR;
@@ -615,6 +617,20 @@ export async function replaceRouteStops(routeId, stops) {
  * Claimed tickets show the claimant as the passenger; the owner is kept as a
  * fallback for unclaimed tickets.
  */
+/**
+ * Reports a trip delay for one route/day. The database notifies every booked
+ * passenger and leaves the bookings/tickets untouched.
+ */
+export async function reportTripDelay(routeId, travelDate, minutes, note) {
+  const { error } = await supabase.rpc('inspector_report_delay', {
+    p_route_id: routeId,
+    p_travel_date: travelDate,
+    p_minutes: minutes,
+    p_note: note || null,
+  });
+  if (error) throw new Error(mapError(error));
+}
+
 export async function fetchRouteSeatBookings(routeId, travelDate) {
   const { data, error } = await supabase
     .from('bookings')

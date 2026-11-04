@@ -1,4 +1,4 @@
-import * as api from './api.js?v=20261103a';
+import * as api from './api.js?v=20261103b';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -2068,9 +2068,55 @@ function openRouteSeatDialog(route) {
   if (dateInput) dateInput.value = state.routeSeatDate;
   const title = $('#route-seats-title');
   if (title) title.textContent = `مقاعد المسار ${route.code}`;
+  const delayButton = $('#btn-delay-trip');
+  if (delayButton) delayButton.hidden = !state.session?.canManage;
   const dialog = $('#route-seats-dialog');
   if (dialog && !dialog.open) dialog.showModal();
   loadRouteSeatBookings();
+}
+
+function openTripDelayDialog() {
+  const route = state.routeSeatActive;
+  if (!route || !state.routeSeatDate) return;
+  const form = $('#trip-delay-form');
+  form.reset();
+  form.minutes.value = '15';
+  setFormError('delay', null);
+  $('#trip-delay-meta').textContent =
+    `${route.code} • ${route.origin} ← ${route.destination} • ` +
+    formatTripDate(state.routeSeatDate);
+  const dialog = $('#trip-delay-dialog');
+  if (!dialog.open) dialog.showModal();
+}
+
+async function saveTripDelay(event) {
+  event.preventDefault();
+  const route = state.routeSeatActive;
+  if (!route || !state.routeSeatDate) return;
+  const form = event.currentTarget;
+  const button = $('#btn-save-trip-delay');
+  const minutes = Number(form.minutes.value);
+  if (!Number.isFinite(minutes) || minutes < 1 || minutes > 600) {
+    setFormError('delay', 'أدخل مدة من 1 إلى 600 دقيقة.');
+    return;
+  }
+
+  setFormError('delay', null);
+  button.disabled = true;
+  try {
+    await api.reportTripDelay(
+      route.id,
+      state.routeSeatDate,
+      Math.round(minutes),
+      form.note.value.trim() || null,
+    );
+    toast('تم تأخير الرحلة وإرسال تنبيه لجميع الركاب.');
+    $('#trip-delay-dialog').close();
+  } catch (error) {
+    setFormError('delay', error.message);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 async function openRouteDialog(route = null) {
@@ -4134,6 +4180,11 @@ function bindStatic() {
       loadRouteSeatBookings();
     });
   }
+
+  const delayTrip = $('#btn-delay-trip');
+  if (delayTrip) delayTrip.addEventListener('click', openTripDelayDialog);
+  const tripDelayForm = $('#trip-delay-form');
+  if (tripDelayForm) tripDelayForm.addEventListener('submit', saveTripDelay);
 
   $('#routes-body').addEventListener('click', async (event) => {
     const seats = event.target.closest('[data-open-seats]');
